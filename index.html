@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FluidTrack — Custom Development Ticketing</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root, [data-theme="dark"] {
+      --bg: #0f0f13; --bg-card: #1a1a23; --bg-card-hover: #22222e; --bg-elevated: #252533;
+      --border: #2a2a3a; --border-light: #363648;
+      --text: #e8e8f0; --text-secondary: #9393a8; --text-dim: #6b6b80;
+      --accent: #6c5ce7; --accent-light: #a29bfe; --accent-bg: rgba(108,92,231,0.12);
+      --green: #00b894; --green-bg: rgba(0,184,148,0.12);
+      --red: #ff6b6b; --red-bg: rgba(255,107,107,0.12);
+      --orange: #fdcb6e; --orange-bg: rgba(253,203,110,0.12);
+      --blue: #74b9ff; --blue-bg: rgba(116,185,255,0.12);
+      --pink: #fd79a8;
+      --radius: 10px; --radius-sm: 6px; --shadow: 0 4px 24px rgba(0,0,0,0.3);
+    }
+    [data-theme="light"] {
+      --bg: #f0f2f5; --bg-card: #ffffff; --bg-card-hover: #f7f8fa; --bg-elevated: #f0f1f4;
+      --border: #dde0e6; --border-light: #c8ccd4;
+      --text: #1a1a2e; --text-secondary: #555770; --text-dim: #8b8da3;
+      --accent: #6c5ce7; --accent-light: #5b4bd6; --accent-bg: rgba(108,92,231,0.08);
+      --green: #00a884; --green-bg: rgba(0,168,132,0.1);
+      --red: #e55050; --red-bg: rgba(229,80,80,0.1);
+      --orange: #e6a817; --orange-bg: rgba(230,168,23,0.1);
+      --blue: #3a8fd6; --blue-bg: rgba(58,143,214,0.1);
+      --pink: #d6638a;
+      --shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    /* Theme toggle switch */
+    .theme-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 0; }
+    .theme-toggle-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+    .theme-switch { position: relative; width: 36px; height: 20px; background: var(--border); border-radius: 10px; transition: background 0.2s; flex-shrink: 0; }
+    .theme-switch.active { background: var(--accent); }
+    .theme-switch-knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: transform 0.2s; }
+    .theme-switch.active .theme-switch-knob { transform: translateX(16px); }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ============ LOGIN ============ */
+    .login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    .login-container { width: 100%; max-width: 400px; }
+    .login-brand { text-align: center; margin-bottom: 40px; }
+    .login-brand h1 { font-size: 36px; font-weight: 800; color: #000000; }
+    .login-brand p { color: var(--text-dim); font-size: 14px; margin-top: 8px; }
+    .login-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 32px; }
+    .login-card h2 { font-size: 18px; font-weight: 700; margin-bottom: 24px; text-align: center; }
+    .login-error { background: var(--red-bg); color: var(--red); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; text-align: center; }
+
+    /* ============ APP LAYOUT ============ */
+    .app { display: flex; height: 100vh; }
+    .sidebar { width: 260px; background: var(--bg-card); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+    .sidebar-brand { padding: 24px 20px; border-bottom: 1px solid var(--border); }
+    .sidebar-brand h1 { font-size: 20px; font-weight: 800; color: #000000; letter-spacing: -0.5px; }
+    .sidebar-brand p { font-size: 11px; color: var(--text-dim); margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+    .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+    .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); }
+    .sidebar-user { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .sidebar-user-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+    .sidebar-user-info { flex: 1; }
+    .sidebar-user-name { font-size: 13px; font-weight: 600; }
+    .sidebar-user-role { font-size: 11px; color: var(--text-dim); text-transform: uppercase; }
+    .nav-section { margin-bottom: 24px; }
+    .nav-section-title { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1.5px; padding: 0 8px; margin-bottom: 8px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-secondary); transition: all 0.15s; }
+    .nav-item:hover { background: var(--bg-elevated); color: var(--text); }
+    .nav-item.active { background: var(--accent-bg); color: var(--accent-light); }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .nav-item .badge { margin-left: auto; background: var(--accent); color: white; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 700; }
+
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 28px; border-bottom: 1px solid var(--border); background: var(--bg-card); flex-shrink: 0; }
+    .topbar-left { display: flex; align-items: center; gap: 16px; }
+    .topbar-left h2 { font-size: 18px; font-weight: 700; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; border: none; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #5b4bd6; }
+    .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--bg-elevated); color: var(--text); }
+    .btn-ghost.active { background: var(--accent-bg); color: var(--accent-light); border-color: var(--accent); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-danger { background: var(--red-bg); color: var(--red); }
+    .btn-danger:hover { background: rgba(255,107,107,0.2); }
+    .btn-success { background: var(--green-bg); color: var(--green); }
+
+    .search-box { display: flex; align-items: center; gap: 8px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 12px; }
+    .search-box input { background: none; border: none; color: var(--text); font-size: 13px; outline: none; width: 200px; font-family: inherit; }
+    .search-box input::placeholder { color: var(--text-dim); }
+    .search-box svg { color: var(--text-dim); width: 16px; height: 16px; }
+
+    .content { flex: 1; overflow: auto; padding: 24px 28px; }
+
+    /* ============ KANBAN ============ */
+    .kanban { display: flex; gap: 16px; height: 100%; overflow-x: auto; padding-bottom: 16px; }
+    .kanban-column { min-width: 290px; max-width: 290px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); display: flex; flex-direction: column; }
+    .kanban-column-header { padding: 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+    .kanban-column-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kanban-column-count { background: var(--bg-elevated); color: var(--text-secondary); font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+    .kanban-cards { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .kanban-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; cursor: grab; transition: all 0.15s; }
+    .kanban-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow); }
+    .kanban-card.dragging { opacity: 0.5; transform: rotate(2deg); }
+    .kanban-card-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; line-height: 1.4; }
+    .kanban-card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .kanban-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .kanban-card-footer span { font-size: 11px; color: var(--text-dim); }
+    .avatar-sm { width: 22px; height: 22px; border-radius: 50%; background: var(--accent-bg); color: var(--accent-light); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+    .drop-zone { min-height: 60px; border: 2px dashed var(--border-light); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 12px; margin-top: 4px; transition: all 0.15s; }
+    .drop-zone.over { border-color: var(--accent); background: var(--accent-bg); color: var(--accent-light); }
+
+    /* ============ TABLE ============ */
+    .table-container { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+    th { background: var(--bg-elevated); padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+    th:hover { color: var(--text); }
+    th .sort-icon { margin-left: 4px; opacity: 0.5; }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    tr:hover td { background: var(--bg-card-hover); }
+    tr { cursor: pointer; }
+
+    /* ============ TIMELINE ============ */
+    .timeline-container { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); overflow: auto; }
+    .timeline-header { display: flex; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-card); z-index: 2; }
+    .timeline-label-col { min-width: 250px; max-width: 250px; padding: 12px 16px; font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; border-right: 1px solid var(--border); background: var(--bg-elevated); position: sticky; left: 0; z-index: 3; }
+    .timeline-days { display: flex; flex: 1; }
+    .timeline-day { min-width: 40px; padding: 8px 4px; text-align: center; font-size: 10px; color: var(--text-dim); border-right: 1px solid var(--border); }
+    .timeline-day.today { background: var(--accent-bg); color: var(--accent-light); font-weight: 700; }
+    .timeline-day.weekend { background: rgba(255,255,255,0.02); }
+    .timeline-row { display: flex; border-bottom: 1px solid var(--border); min-height: 44px; align-items: center; }
+    .timeline-row-label { min-width: 250px; max-width: 250px; padding: 8px 16px; font-size: 12px; font-weight: 500; border-right: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; position: sticky; left: 0; background: var(--bg-card); z-index: 1; }
+    .timeline-row-label:hover { color: var(--accent-light); }
+    .timeline-row-bars { display: flex; flex: 1; position: relative; height: 44px; }
+    .timeline-bar { position: absolute; top: 10px; height: 24px; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 10px; font-weight: 600; color: white; min-width: 20px; cursor: pointer; }
+    .timeline-bar:hover { filter: brightness(1.2); }
+    .timeline-today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); z-index: 1; }
+
+    /* ============ CALENDAR ============ */
+    .calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .calendar-nav { display: flex; align-items: center; gap: 12px; }
+    .calendar-nav h3 { font-size: 18px; font-weight: 700; min-width: 200px; text-align: center; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border-radius: var(--radius); overflow: hidden; }
+    .calendar-day-header { background: var(--bg-elevated); padding: 10px; text-align: center; font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+    .calendar-cell { background: var(--bg-card); min-height: 120px; padding: 8px; }
+    .calendar-cell.today { background: var(--bg-card-hover); }
+    .calendar-cell.other-month { opacity: 0.3; }
+    .calendar-date { font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary); }
+    .calendar-cell.today .calendar-date { color: var(--accent-light); }
+    .calendar-event { font-size: 10px; padding: 3px 6px; border-radius: 3px; margin-bottom: 3px; cursor: pointer; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .calendar-event:hover { filter: brightness(1.2); }
+
+    /* ============ DASHBOARD ============ */
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+    .widget { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: grab; transition: all 0.15s; }
+    .widget:hover { border-color: var(--border-light); }
+    .widget.dragging { opacity: 0.5; transform: scale(0.98); }
+    .widget-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .widget-header h3 { font-size: 14px; font-weight: 700; }
+    .widget-body { padding: 20px; }
+    .widget-drag-handle { cursor: grab; color: var(--text-dim); padding: 4px; }
+    .widget-drag-handle:hover { color: var(--text); }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .stat-item { text-align: center; padding: 12px; background: var(--bg-elevated); border-radius: var(--radius-sm); }
+    .stat-value { font-size: 28px; font-weight: 800; }
+    .stat-label { font-size: 11px; color: var(--text-dim); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .progress-bar-bg { background: var(--bg-elevated); border-radius: 6px; height: 10px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 6px; transition: width 0.5s ease; }
+
+    .chart-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .chart-bar-label { font-size: 12px; color: var(--text-secondary); min-width: 100px; text-align: right; }
+    .chart-bar-track { flex: 1; height: 24px; background: var(--bg-elevated); border-radius: 4px; overflow: hidden; position: relative; }
+    .chart-bar-value { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 600; color: white; transition: width 0.5s ease; }
+
+    /* ============ MODAL ============ */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; width: 700px; max-height: 85vh; overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,0.5); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-card); z-index: 1; }
+    .modal-header h2 { font-size: 16px; font-weight: 700; }
+    .modal-body { padding: 24px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; position: sticky; bottom: 0; background: var(--bg-card); }
+
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-control { width: 100%; padding: 10px 12px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.15s; }
+    .form-control:focus { border-color: var(--accent); }
+    textarea.form-control { min-height: 80px; resize: vertical; }
+    select.form-control { cursor: pointer; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .detail-section { margin-bottom: 24px; }
+    .detail-section-title { font-size: 12px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+
+    .attachment-list { display: flex; flex-direction: column; gap: 6px; }
+    .attachment-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg-elevated); border-radius: var(--radius-sm); font-size: 12px; }
+    .attachment-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .attachment-item .size { color: var(--text-dim); }
+    .attachment-item .remove-btn { color: var(--red); cursor: pointer; background: none; border: none; font-size: 16px; padding: 0 4px; }
+
+    .file-upload-zone { border: 2px dashed var(--border); border-radius: var(--radius-sm); padding: 20px; text-align: center; cursor: pointer; transition: all 0.15s; }
+    .file-upload-zone:hover { border-color: var(--accent); background: var(--accent-bg); }
+    .file-upload-zone p { font-size: 13px; color: var(--text-dim); }
+
+    .comment-list { display: flex; flex-direction: column; gap: 12px; }
+    .comment-item { padding: 12px; background: var(--bg-elevated); border-radius: var(--radius-sm); }
+    .comment-item .comment-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .comment-item .comment-author { font-size: 12px; font-weight: 600; }
+    .comment-item .comment-date { font-size: 11px; color: var(--text-dim); }
+    .comment-item .comment-body { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+    .activity-list { display: flex; flex-direction: column; gap: 8px; }
+    .activity-item { display: flex; gap: 10px; font-size: 12px; color: var(--text-secondary); padding: 6px 0; }
+    .activity-item .activity-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-top: 5px; flex-shrink: 0; }
+
+    .hours-display { display: flex; gap: 20px; margin-bottom: 12px; }
+    .hours-item { flex: 1; padding: 12px; background: var(--bg-elevated); border-radius: var(--radius-sm); text-align: center; }
+    .hours-item .hours-value { font-size: 24px; font-weight: 800; }
+    .hours-item .hours-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; margin-top: 2px; }
+
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .badge-backlog { background: rgba(147,147,168,0.15); color: var(--text-secondary); }
+    .badge-todo { background: var(--blue-bg); color: var(--blue); }
+    .badge-inprogress { background: var(--orange-bg); color: var(--orange); }
+    .badge-review { background: rgba(253,121,168,0.12); color: var(--pink); }
+    .badge-done { background: var(--green-bg); color: var(--green); }
+    .badge-low { background: rgba(147,147,168,0.1); color: var(--text-secondary); }
+    .badge-medium { background: var(--blue-bg); color: var(--blue); }
+    .badge-high { background: var(--orange-bg); color: var(--orange); }
+    .badge-urgent { background: var(--red-bg); color: var(--red); }
+    .badge-pending { background: var(--orange-bg); color: var(--orange); }
+    .badge-approved { background: var(--green-bg); color: var(--green); }
+    .badge-rejected { background: var(--red-bg); color: var(--red); }
+    .badge-changes { background: rgba(253,121,168,0.12); color: var(--pink); }
+
+    .close-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 20px; padding: 4px 8px; border-radius: 4px; }
+    .close-btn:hover { background: var(--bg-elevated); color: var(--text); }
+
+    .filter-bar select { background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 12px; font-family: inherit; cursor: pointer; outline: none; }
+
+    /* ============ ADMIN SETTINGS ============ */
+    .settings-panel { max-width: 900px; }
+    .settings-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 20px; }
+    .settings-section-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .settings-section-header h3 { font-size: 15px; font-weight: 700; }
+    .settings-section-body { padding: 20px; }
+    .client-card { display: flex; align-items: center; gap: 16px; padding: 16px; background: var(--bg-elevated); border-radius: var(--radius-sm); margin-bottom: 12px; border: 1px solid var(--border); }
+    .client-card:hover { border-color: var(--border-light); }
+    .client-logo { width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; overflow: hidden; }
+    .client-logo img { width: 100%; height: 100%; object-fit: cover; }
+    .client-info { flex: 1; }
+    .client-info h4 { font-size: 14px; font-weight: 600; }
+    .client-info p { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+    .client-actions { display: flex; gap: 8px; }
+    .color-swatch { width: 24px; height: 24px; border-radius: 4px; border: 2px solid var(--border); cursor: pointer; }
+    .color-input-group { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .color-input-group label { font-size: 12px; color: var(--text-secondary); min-width: 80px; }
+    .color-input-group input[type="color"] { width: 36px; height: 28px; border: none; border-radius: 4px; cursor: pointer; background: none; }
+    .color-input-group input[type="text"] { width: 80px; }
+    .import-result { padding: 12px; background: var(--green-bg); border-radius: var(--radius-sm); margin-top: 12px; color: var(--green); font-size: 13px; }
+    .import-error { padding: 12px; background: var(--red-bg); border-radius: var(--radius-sm); margin-top: 12px; color: var(--red); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('devtrack_theme') || 'dark');</script>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo } = React;
+
+    // ============ ICONS ============
+    const Icons = {
+      dashboard: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>,
+      kanban: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="5" height="15" rx="1"/></svg>,
+      table: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>,
+      timeline: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="16" y2="12"/><line x1="4" y1="18" x2="12" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="12" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/></svg>,
+      calendar: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+      plus: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+      search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+      clock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+      check: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>,
+      paperclip: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>,
+      grip: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="9" cy="6" r="1" fill="currentColor"/><circle cx="15" cy="6" r="1" fill="currentColor"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><circle cx="9" cy="18" r="1" fill="currentColor"/><circle cx="15" cy="18" r="1" fill="currentColor"/></svg>,
+      chevronLeft: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>,
+      chevronRight: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>,
+      x: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+      upload: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+      alert: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+      logout: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+      shield: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+      users: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+      settings: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>,
+      palette: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="8" cy="18.5" r="2.5"/><circle cx="17" cy="15.5" r="2.5"/><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.94 1.03 6.7 2.83L21 8v4z"/></svg>,
+      download: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+      sun: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+      moon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+      slack: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14.5 2c-1.1 0-2 .9-2 2v4.5H17c1.1 0 2-.9 2-2s-.9-2-2-2h-2.5V2z"/><path d="M2 9.5c0-1.1.9-2 2-2h4.5V12c0 1.1-.9 2-2 2s-2-.9-2-2V9.5H2z"/><path d="M9.5 22c1.1 0 2-.9 2-2v-4.5H7c-1.1 0-2 .9-2 2s.9 2 2 2h2.5V22z"/><path d="M22 14.5c0 1.1-.9 2-2 2h-4.5V12c0-1.1.9-2 2-2s2 .9 2 2v2.5H22z"/></svg>,
+      bell: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+    };
+
+    // ============ HELPERS ============
+    const BASE = window.location.origin + '/api';
+    let authToken = localStorage.getItem('devtrack_token') || '';
+
+    async function api(path, opts = {}) {
+      const headers = { 'Content-Type': 'application/json', 'x-auth-token': authToken };
+      const res = await fetch(`${BASE}${path}`, { headers, ...opts });
+      if (res.status === 401) { localStorage.removeItem('devtrack_token'); window.location.reload(); return; }
+      return res.json();
+    }
+
+    // Dynamic statuses & team members (loaded from API)
+    let STATUSES = ['Backlog', 'To Do', 'In Progress', 'Review', 'Done'];
+    let STATUS_COLORS = { 'Backlog': '#6b6b80', 'To Do': '#74b9ff', 'In Progress': '#fdcb6e', 'Review': '#fd79a8', 'Done': '#00b894' };
+    let TEAM_MEMBERS = [];
+
+    const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
+    const APPROVALS = ['Pending', 'Approved', 'Rejected', 'Changes Requested'];
+    const PRIORITY_COLORS = { 'Low': '#6b6b80', 'Medium': '#74b9ff', 'High': '#fdcb6e', 'Urgent': '#ff6b6b' };
+
+    function statusBadgeClass(s) {
+      const map = { 'Backlog': 'backlog', 'To Do': 'todo', 'In Progress': 'inprogress', 'Review': 'review', 'Done': 'done' };
+      return `badge badge-${map[s] || 'backlog'}`;
+    }
+    function priorityBadgeClass(p) { return `badge badge-${p.toLowerCase()}`; }
+    function approvalBadgeClass(a) {
+      const map = { 'Pending': 'pending', 'Approved': 'approved', 'Rejected': 'rejected', 'Changes Requested': 'changes' };
+      return `badge badge-${map[a] || 'pending'}`;
+    }
+    function formatDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+    function formatFileSize(b) { if (b < 1024) return b + ' B'; if (b < 1048576) return (b / 1024).toFixed(1) + ' KB'; return (b / 1048576).toFixed(1) + ' MB'; }
+    function ini(name) { return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : '?'; }
+
+    function StatusBadge({ status }) { return <span className={statusBadgeClass(status)}>{status}</span>; }
+    function PriorityBadge({ priority }) { return <span className={priorityBadgeClass(priority)}>{priority}</span>; }
+    function ApprovalBadge({ status }) { return <span className={approvalBadgeClass(status)}>{status}</span>; }
+
+    // ============ LOGIN PAGE ============
+    function LoginPage({ onLogin }) {
+      const [username, setUsername] = useState('');
+      const [password, setPassword] = useState('');
+      const [error, setError] = useState('');
+      const [loading, setLoading] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!username || !password) { setError('Please enter both username and password'); return; }
+        setLoading(true); setError('');
+        try {
+          const res = await fetch(`${BASE}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+          const data = await res.json();
+          if (!res.ok) { setError(data.error || 'Login failed'); setLoading(false); return; }
+          authToken = data.token;
+          localStorage.setItem('devtrack_token', data.token);
+          onLogin(data.user);
+        } catch (err) { setError('Connection error. Please try again.'); }
+        setLoading(false);
+      };
+
+      return (
+        <div className="login-page">
+          <div className="login-container">
+            <div className="login-brand">
+              <img src="/fluidtrack-logo.png" alt="FluidTrack" style={{ width: 64, height: 64, borderRadius: 12, objectFit: 'cover', marginBottom: 16 }} />
+              <h1>FluidTrack</h1>
+              <p>Custom Development Ticketing System</p>
+            </div>
+            <div className="login-card">
+              <h2>Sign In</h2>
+              {error && <div className="login-error">{error}</div>}
+              <form onSubmit={handleSubmit}>
+                <div className="form-group">
+                  <label>Username</label>
+                  <input className="form-control" type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Enter your username" autoFocus autoComplete="username" />
+                </div>
+                <div className="form-group">
+                  <label>Password</label>
+                  <input className="form-control" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password" autoComplete="current-password" />
+                </div>
+                <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: '100%', padding: '12px', fontSize: 14, marginTop: 8 }}>
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============ TICKET MODAL ============
+    function TicketModal({ ticket, onClose, onSave, onDelete, isNew, user, statuses, teamMembers }) {
+      const isAdmin = user.role === 'admin';
+      const statusList = statuses.length > 0 ? statuses.map(s => s.name) : STATUSES;
+      const [form, setForm] = useState(ticket || {
+        title: '', description: '', status: statusList[0] || 'Backlog', priority: 'Medium',
+        estimated_hours: 0, actual_hours: 0, approval_status: 'Pending',
+        assignee: '', client: isAdmin ? '' : user.client_name, due_date: '', tags: []
+      });
+      const [comments, setComments] = useState([]);
+      const [activity, setActivity] = useState([]);
+      const [newComment, setNewComment] = useState('');
+      const [tab, setTab] = useState('details');
+      const fileRef = useRef(null);
+
+      useEffect(() => {
+        if (ticket && ticket.id) {
+          api(`/tickets/${ticket.id}`).then(data => {
+            if (data && !data.error) { setForm(data); setComments(data.comments || []); setActivity(data.activity || []); }
+          });
+        }
+      }, [ticket]);
+
+      const handleChange = (field, value) => setForm(f => ({ ...f, [field]: value }));
+
+      const handleSave = async () => {
+        if (!form.title.trim()) return alert('Title is required');
+        await onSave(form);
+      };
+
+      const handleUpload = async (e) => {
+        const files = e.target.files;
+        if (!files.length || !form.id) return;
+        const fd = new FormData();
+        Array.from(files).forEach(f => fd.append('files', f));
+        const atts = await fetch(`${BASE}/tickets/${form.id}/attachments`, { method: 'POST', headers: { 'x-auth-token': authToken }, body: fd }).then(r => r.json());
+        setForm(f => ({ ...f, attachments: [...(f.attachments || []), ...atts] }));
+      };
+
+      const handleDeleteAttachment = async (attId) => {
+        await api(`/attachments/${attId}`, { method: 'DELETE' });
+        setForm(f => ({ ...f, attachments: (f.attachments || []).filter(a => a.id !== attId) }));
+      };
+
+      const handleAddComment = async () => {
+        if (!newComment.trim() || !form.id) return;
+        const comment = await api(`/tickets/${form.id}/comments`, { method: 'POST', body: JSON.stringify({ content: newComment }) });
+        setComments(c => [comment, ...c]);
+        setNewComment('');
+      };
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{isNew ? 'Create Ticket' : 'Ticket Details'}</h2>
+              <button className="close-btn" onClick={onClose}>{Icons.x}</button>
+            </div>
+            {!isNew && (
+              <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 24px' }}>
+                {['details', 'comments', 'activity'].map(t => (
+                  <button key={t} className={`btn btn-ghost btn-sm ${tab === t ? 'active' : ''}`}
+                    style={{ borderRadius: 0, borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent', margin: 0 }}
+                    onClick={() => setTab(t)}>{t.charAt(0).toUpperCase() + t.slice(1)}</button>
+                ))}
+              </div>
+            )}
+            <div className="modal-body">
+              {(tab === 'details' || isNew) && (
+                <>
+                  <div className="form-group"><label>Title</label>
+                    <input className="form-control" value={form.title || ''} onChange={e => handleChange('title', e.target.value)} placeholder="Enter ticket title..." /></div>
+                  <div className="form-group"><label>Description</label>
+                    <textarea className="form-control" value={form.description || ''} onChange={e => handleChange('description', e.target.value)} placeholder="Describe the work..." /></div>
+                  <div className="form-row">
+                    <div className="form-group"><label>Status</label>
+                      <select className="form-control" value={form.status} onChange={e => handleChange('status', e.target.value)}>
+                        {statusList.map(s => <option key={s}>{s}</option>)}</select></div>
+                    <div className="form-group"><label>Priority</label>
+                      <select className="form-control" value={form.priority} onChange={e => handleChange('priority', e.target.value)}>
+                        {PRIORITIES.map(p => <option key={p}>{p}</option>)}</select></div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group"><label>Assignee</label>
+                      <select className="form-control" value={form.assignee || ''} onChange={e => handleChange('assignee', e.target.value)}>
+                        <option value="">Unassigned</option>
+                        {teamMembers.map(m => <option key={m.id} value={m.name}>{m.name}{m.role ? ` (${m.role})` : ''}</option>)}
+                      </select></div>
+                    {isAdmin ? (
+                      <div className="form-group"><label>Client</label>
+                        <input className="form-control" value={form.client || ''} onChange={e => handleChange('client', e.target.value)} placeholder="Client name" /></div>
+                    ) : (
+                      <div className="form-group"><label>Client</label>
+                        <input className="form-control" value={user.client_name} disabled style={{ opacity: 0.6 }} /></div>
+                    )}
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group"><label>Due Date</label>
+                      <input className="form-control" type="date" value={form.due_date || ''} onChange={e => handleChange('due_date', e.target.value)} /></div>
+                    <div className="form-group"><label>Approval Status</label>
+                      <select className="form-control" value={form.approval_status} onChange={e => handleChange('approval_status', e.target.value)}>
+                        {APPROVALS.map(a => <option key={a}>{a}</option>)}</select></div>
+                  </div>
+                  <div className="detail-section">
+                    <div className="detail-section-title">Hours Tracking</div>
+                    <div className="hours-display">
+                      <div className="hours-item">
+                        <div className="hours-value" style={{ color: 'var(--blue)' }}>{form.estimated_hours || 0}</div>
+                        <div className="hours-label">Estimated Hours</div>
+                        <input className="form-control" type="number" min="0" step="0.5" value={form.estimated_hours || 0} onChange={e => handleChange('estimated_hours', parseFloat(e.target.value) || 0)} style={{ marginTop: 8, textAlign: 'center' }} />
+                      </div>
+                      <div className="hours-item">
+                        <div className="hours-value" style={{ color: form.actual_hours > form.estimated_hours ? 'var(--red)' : 'var(--green)' }}>{form.actual_hours || 0}</div>
+                        <div className="hours-label">Actual Hours</div>
+                        <input className="form-control" type="number" min="0" step="0.5" value={form.actual_hours || 0} onChange={e => handleChange('actual_hours', parseFloat(e.target.value) || 0)} style={{ marginTop: 8, textAlign: 'center' }} />
+                      </div>
+                    </div>
+                    {form.estimated_hours > 0 && (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, color: 'var(--text-dim)' }}>
+                          <span>Progress</span><span>{Math.min(100, Math.round((form.actual_hours / form.estimated_hours) * 100))}%</span></div>
+                        <div className="progress-bar-bg"><div className="progress-bar-fill" style={{ width: `${Math.min(100, (form.actual_hours / form.estimated_hours) * 100)}%`, background: form.actual_hours > form.estimated_hours ? 'var(--red)' : 'var(--accent)' }} /></div>
+                      </div>
+                    )}
+                  </div>
+                  {!isNew && (
+                    <div className="detail-section">
+                      <div className="detail-section-title">Attachments ({(form.attachments || []).length})</div>
+                      <div className="attachment-list">
+                        {(form.attachments || []).map(a => (
+                          <div key={a.id} className="attachment-item">
+                            {Icons.paperclip}<span className="name">{a.original_name}</span><span className="size">{formatFileSize(a.file_size)}</span>
+                            <a href={`/uploads/${a.filename}`} target="_blank" className="btn btn-sm btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Open</a>
+                            <button className="remove-btn" onClick={() => handleDeleteAttachment(a.id)}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                      <button className="btn btn-ghost btn-sm" style={{ marginTop: 8, fontSize: 11, padding: '4px 10px', gap: 4 }} onClick={() => fileRef.current?.click()}>
+                        {Icons.paperclip} Attach files
+                        <input ref={fileRef} type="file" multiple style={{ display: 'none' }} onChange={handleUpload} />
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+              {tab === 'comments' && !isNew && (
+                <div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                    <input className="form-control" placeholder="Add a comment..." value={newComment} onChange={e => setNewComment(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddComment()} />
+                    <button className="btn btn-primary" onClick={handleAddComment}>Send</button>
+                  </div>
+                  <div className="comment-list">
+                    {comments.map(c => (
+                      <div key={c.id} className="comment-item">
+                        <div className="comment-header"><span className="comment-author">{c.author}</span><span className="comment-date">{formatDate(c.created_at)}</span></div>
+                        <div className="comment-body">{c.content}</div>
+                      </div>
+                    ))}
+                    {comments.length === 0 && <p style={{ color: 'var(--text-dim)', fontSize: 13 }}>No comments yet.</p>}
+                  </div>
+                </div>
+              )}
+              {tab === 'activity' && !isNew && (
+                <div className="activity-list">
+                  {activity.map(a => (
+                    <div key={a.id} className="activity-item"><div className="activity-dot" />
+                      <div><span style={{ fontWeight: 600 }}>{a.details}</span>
+                        <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>{a.user_name} · {formatDate(a.created_at)}</div></div>
+                    </div>
+                  ))}
+                  {activity.length === 0 && <p style={{ color: 'var(--text-dim)', fontSize: 13 }}>No activity yet.</p>}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              {!isNew && <button className="btn btn-danger" onClick={() => onDelete(form.id)}>Delete</button>}
+              <div style={{ flex: 1 }} />
+              <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSave}>{isNew ? 'Create' : 'Save Changes'}</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============ KANBAN VIEW ============
+    function KanbanView({ tickets, onTicketClick, onUpdateTicket, user, statuses }) {
+      const [dragItem, setDragItem] = useState(null);
+      const [overCol, setOverCol] = useState(null);
+      const statusList = statuses.length > 0 ? statuses.map(s => s.name) : STATUSES;
+      const statusColorMap = {};
+      statuses.forEach(s => { statusColorMap[s.name] = s.color; });
+      const getStatusColor = (name) => statusColorMap[name] || STATUS_COLORS[name] || '#6b6b80';
+      const columns = statusList.map(status => ({ status, tickets: tickets.filter(t => t.status === status).sort((a, b) => a.sort_order - b.sort_order) }));
+
+      const handleDragStart = (e, ticket) => { setDragItem(ticket); e.dataTransfer.effectAllowed = 'move'; setTimeout(() => { e.target.classList.add('dragging'); }, 0); };
+      const handleDragEnd = (e) => { e.target.classList.remove('dragging'); setDragItem(null); setOverCol(null); };
+      const handleDrop = async (e, status) => { e.preventDefault(); setOverCol(null); if (dragItem && dragItem.status !== status) await onUpdateTicket(dragItem.id, { status }); };
+
+      return (
+        <div className="kanban">
+          {columns.map(col => (
+            <div key={col.status} className="kanban-column" onDragOver={e => { e.preventDefault(); setOverCol(col.status); }} onDrop={e => handleDrop(e, col.status)}>
+              <div className="kanban-column-header">
+                <div className="kanban-column-title"><span style={{ width: 10, height: 10, borderRadius: 3, background: getStatusColor(col.status), display: 'inline-block' }} />{col.status}</div>
+                <span className="kanban-column-count">{col.tickets.length}</span>
+              </div>
+              <div className="kanban-cards">
+                {col.tickets.map(ticket => (
+                  <div key={ticket.id} className="kanban-card" draggable onDragStart={e => handleDragStart(e, ticket)} onDragEnd={handleDragEnd} onClick={() => onTicketClick(ticket)}>
+                    <div className="kanban-card-title">{ticket.title}</div>
+                    <div className="kanban-card-meta"><PriorityBadge priority={ticket.priority} /><ApprovalBadge status={ticket.approval_status} /></div>
+                    {user.role === 'admin' && ticket.client && <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 6 }}>{ticket.client}</div>}
+                    <div className="kanban-card-footer">
+                      <span>{Icons.clock} {ticket.actual_hours || 0}/{ticket.estimated_hours || 0}h</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {(ticket.attachments || []).length > 0 && <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{Icons.paperclip} {ticket.attachments.length}</span>}
+                        {ticket.assignee && <div className="avatar-sm" title={ticket.assignee}>{ini(ticket.assignee)}</div>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {overCol === col.status && dragItem && <div className="drop-zone over">Drop here</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ============ TABLE VIEW ============
+    function TableView({ tickets, onTicketClick, user }) {
+      const [sortCol, setSortCol] = useState('created_at');
+      const [sortDir, setSortDir] = useState('desc');
+      const isAdmin = user.role === 'admin';
+
+      const sorted = [...tickets].sort((a, b) => {
+        let va = a[sortCol], vb = b[sortCol];
+        if (typeof va === 'string') va = va.toLowerCase();
+        if (typeof vb === 'string') vb = vb.toLowerCase();
+        if (va < vb) return sortDir === 'asc' ? -1 : 1;
+        if (va > vb) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      const toggleSort = (col) => { if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortCol(col); setSortDir('asc'); } };
+      const SortIcon = ({ col }) => sortCol === col ? <span className="sort-icon">{sortDir === 'asc' ? '↑' : '↓'}</span> : null;
+
+      return (
+        <div className="table-container">
+          <table>
+            <thead><tr>
+              <th onClick={() => toggleSort('title')}>Title <SortIcon col="title" /></th>
+              <th onClick={() => toggleSort('status')}>Status <SortIcon col="status" /></th>
+              <th onClick={() => toggleSort('priority')}>Priority <SortIcon col="priority" /></th>
+              <th onClick={() => toggleSort('assignee')}>Assignee <SortIcon col="assignee" /></th>
+              {isAdmin && <th onClick={() => toggleSort('client')}>Client <SortIcon col="client" /></th>}
+              <th onClick={() => toggleSort('estimated_hours')}>Est. Hours <SortIcon col="estimated_hours" /></th>
+              <th onClick={() => toggleSort('actual_hours')}>Actual <SortIcon col="actual_hours" /></th>
+              <th onClick={() => toggleSort('approval_status')}>Approval <SortIcon col="approval_status" /></th>
+              <th onClick={() => toggleSort('due_date')}>Due <SortIcon col="due_date" /></th>
+            </tr></thead>
+            <tbody>
+              {sorted.map(t => (
+                <tr key={t.id} onClick={() => onTicketClick(t)}>
+                  <td style={{ fontWeight: 600, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</td>
+                  <td><StatusBadge status={t.status} /></td>
+                  <td><PriorityBadge priority={t.priority} /></td>
+                  <td><div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{t.assignee && <div className="avatar-sm">{ini(t.assignee)}</div>}<span style={{ fontSize: 12 }}>{t.assignee || '—'}</span></div></td>
+                  {isAdmin && <td style={{ fontSize: 12 }}>{t.client || '—'}</td>}
+                  <td style={{ textAlign: 'center' }}>{t.estimated_hours}h</td>
+                  <td style={{ textAlign: 'center', color: t.actual_hours > t.estimated_hours ? 'var(--red)' : 'var(--green)' }}>{t.actual_hours}h</td>
+                  <td><ApprovalBadge status={t.approval_status} /></td>
+                  <td style={{ fontSize: 12 }}>{formatDate(t.due_date)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    // ============ TIMELINE VIEW ============
+    function TimelineView({ tickets, onTicketClick }) {
+      const today = new Date(); const startDate = new Date(today); startDate.setDate(startDate.getDate() - 7);
+      const days = []; for (let i = 0; i < 45; i++) { const d = new Date(startDate); d.setDate(d.getDate() + i); days.push(d); }
+      const dayWidth = 40;
+      const getDayOffset = (dateStr) => { if (!dateStr) return null; return Math.floor((new Date(dateStr) - startDate) / 86400000); };
+      const sorted = [...tickets].filter(t => t.due_date).sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+
+      return (
+        <div className="timeline-container" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+          <div className="timeline-header">
+            <div className="timeline-label-col">Ticket</div>
+            <div className="timeline-days">
+              {days.map((d, i) => (
+                <div key={i} className={`timeline-day ${d.toDateString() === today.toDateString() ? 'today' : ''} ${d.getDay() === 0 || d.getDay() === 6 ? 'weekend' : ''}`} style={{ minWidth: dayWidth }}>
+                  <div>{d.toLocaleDateString('en', { weekday: 'short' }).charAt(0)}</div><div style={{ fontWeight: 600 }}>{d.getDate()}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {sorted.map(ticket => {
+            const dueOffset = getDayOffset(ticket.due_date);
+            const estDays = Math.max(1, Math.ceil((ticket.estimated_hours || 8) / 8));
+            const barStart = Math.max(0, (dueOffset - estDays)) * dayWidth;
+            const barWidth = estDays * dayWidth;
+            const progress = ticket.estimated_hours > 0 ? Math.min(1, ticket.actual_hours / ticket.estimated_hours) : 0;
+            return (
+              <div key={ticket.id} className="timeline-row">
+                <div className="timeline-row-label" onClick={() => onTicketClick(ticket)}>{ticket.title}</div>
+                <div className="timeline-row-bars" style={{ minWidth: days.length * dayWidth }}>
+                  <div className="timeline-today-line" style={{ left: getDayOffset(today.toISOString().split('T')[0]) * dayWidth }} />
+                  {dueOffset !== null && (
+                    <div className="timeline-bar" style={{ left: barStart, width: barWidth, background: `linear-gradient(90deg, ${STATUS_COLORS[ticket.status]} ${progress * 100}%, ${STATUS_COLORS[ticket.status]}44 ${progress * 100}%)` }}
+                      onClick={() => onTicketClick(ticket)} title={`${ticket.title} — ${ticket.actual_hours}/${ticket.estimated_hours}h`}>
+                      {barWidth > 60 ? ticket.title.substring(0, Math.floor(barWidth / 8)) : ''}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ============ CALENDAR VIEW ============
+    function CalendarView({ tickets, onTicketClick }) {
+      const [currentMonth, setCurrentMonth] = useState(new Date());
+      const year = currentMonth.getFullYear(); const month = currentMonth.getMonth();
+      const firstDay = new Date(year, month, 1); const lastDay = new Date(year, month + 1, 0);
+      const cells = [];
+      for (let i = firstDay.getDay() - 1; i >= 0; i--) cells.push({ date: new Date(year, month, -i), otherMonth: true });
+      for (let i = 1; i <= lastDay.getDate(); i++) cells.push({ date: new Date(year, month, i), otherMonth: false });
+      while (cells.length < 42) { const n = cells.length - lastDay.getDate() - firstDay.getDay() + 1; cells.push({ date: new Date(year, month + 1, n), otherMonth: true }); }
+
+      const today = new Date();
+      const ticketsByDate = {};
+      tickets.forEach(t => { if (t.due_date) { if (!ticketsByDate[t.due_date]) ticketsByDate[t.due_date] = []; ticketsByDate[t.due_date].push(t); } });
+
+      return (
+        <div>
+          <div className="calendar-header">
+            <div className="calendar-nav">
+              <button className="btn btn-ghost btn-sm" onClick={() => setCurrentMonth(new Date(year, month - 1))}>{Icons.chevronLeft}</button>
+              <h3>{currentMonth.toLocaleDateString('en', { month: 'long', year: 'numeric' })}</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setCurrentMonth(new Date(year, month + 1))}>{Icons.chevronRight}</button>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setCurrentMonth(new Date())}>Today</button>
+          </div>
+          <div className="calendar-grid">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="calendar-day-header">{d}</div>)}
+            {cells.map((cell, i) => {
+              const dateKey = cell.date.toISOString().split('T')[0];
+              const dayTickets = ticketsByDate[dateKey] || [];
+              return (
+                <div key={i} className={`calendar-cell ${cell.date.toDateString() === today.toDateString() ? 'today' : ''} ${cell.otherMonth ? 'other-month' : ''}`}>
+                  <div className="calendar-date">{cell.date.getDate()}</div>
+                  {dayTickets.slice(0, 3).map(t => (
+                    <div key={t.id} className="calendar-event" style={{ background: STATUS_COLORS[t.status] + '33', color: STATUS_COLORS[t.status] }} onClick={() => onTicketClick(t)}>{t.title}</div>
+                  ))}
+                  {dayTickets.length > 3 && <div style={{ fontSize: 10, color: 'var(--text-dim)', paddingLeft: 6 }}>+{dayTickets.length - 3} more</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // ============ DASHBOARD VIEW ============
+    function DashboardView({ tickets, stats, user }) {
+      const isAdmin = user.role === 'admin';
+      const adminWidgets = [
+        { id: 'overview', title: 'Overview', type: 'overview' },
+        { id: 'by-status', title: 'Tickets by Status', type: 'status-chart' },
+        { id: 'by-priority', title: 'Tickets by Priority', type: 'priority-chart' },
+        { id: 'hours', title: 'Hours Tracking', type: 'hours' },
+        { id: 'by-client', title: 'By Client', type: 'client-chart' },
+        { id: 'approvals', title: 'Approval Status', type: 'approvals' },
+        { id: 'recent', title: 'Recent Activity', type: 'recent' },
+        { id: 'overdue', title: 'Overdue Tickets', type: 'overdue' },
+      ];
+      const clientWidgets = [
+        { id: 'overview', title: 'Overview', type: 'overview' },
+        { id: 'by-status', title: 'Tickets by Status', type: 'status-chart' },
+        { id: 'by-priority', title: 'Tickets by Priority', type: 'priority-chart' },
+        { id: 'hours', title: 'Hours Tracking', type: 'hours' },
+        { id: 'approvals', title: 'Approval Status', type: 'approvals' },
+        { id: 'recent', title: 'Recent Activity', type: 'recent' },
+        { id: 'overdue', title: 'Overdue Tickets', type: 'overdue' },
+      ];
+
+      const [widgets, setWidgets] = useState(isAdmin ? adminWidgets : clientWidgets);
+      const [dragIdx, setDragIdx] = useState(null);
+
+      const handleDragStart = (e, idx) => { setDragIdx(idx); e.dataTransfer.effectAllowed = 'move'; };
+      const handleDragOver = (e, idx) => {
+        e.preventDefault(); if (dragIdx === null || dragIdx === idx) return;
+        const nw = [...widgets]; const [rem] = nw.splice(dragIdx, 1); nw.splice(idx, 0, rem); setWidgets(nw); setDragIdx(idx);
+      };
+
+      const maxStatusCount = Math.max(1, ...(stats.byStatus || []).map(s => s.count));
+      const maxPriorityCount = Math.max(1, ...(stats.byPriority || []).map(s => s.count));
+      const maxClientCount = Math.max(1, ...(stats.byClient || []).map(s => s.count));
+      const overdue = tickets.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'Done');
+      const recentTickets = [...tickets].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 5);
+
+      const renderWidget = (w) => {
+        switch (w.type) {
+          case 'overview': return (
+            <div className="stat-grid">
+              <div className="stat-item"><div className="stat-value" style={{ color: 'var(--accent-light)' }}>{stats.total || 0}</div><div className="stat-label">Total Tickets</div></div>
+              <div className="stat-item"><div className="stat-value" style={{ color: 'var(--red)' }}>{stats.overdue || 0}</div><div className="stat-label">Overdue</div></div>
+              <div className="stat-item"><div className="stat-value" style={{ color: 'var(--blue)' }}>{stats.totalEstimated || 0}h</div><div className="stat-label">Est. Hours</div></div>
+              <div className="stat-item"><div className="stat-value" style={{ color: 'var(--green)' }}>{stats.totalActual || 0}h</div><div className="stat-label">Actual Hours</div></div>
+            </div>);
+          case 'status-chart': return (stats.byStatus || []).map(s => (
+            <div key={s.status} className="chart-bar-row"><div className="chart-bar-label">{s.status}</div><div className="chart-bar-track"><div className="chart-bar-value" style={{ width: `${(s.count / maxStatusCount) * 100}%`, background: STATUS_COLORS[s.status] }}>{s.count}</div></div></div>));
+          case 'priority-chart': return (stats.byPriority || []).map(s => (
+            <div key={s.priority} className="chart-bar-row"><div className="chart-bar-label">{s.priority}</div><div className="chart-bar-track"><div className="chart-bar-value" style={{ width: `${(s.count / maxPriorityCount) * 100}%`, background: PRIORITY_COLORS[s.priority] }}>{s.count}</div></div></div>));
+          case 'hours':
+            const pct = stats.totalEstimated > 0 ? Math.round((stats.totalActual / stats.totalEstimated) * 100) : 0;
+            return (<div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div><span style={{ fontSize: 28, fontWeight: 800, color: 'var(--blue)' }}>{stats.totalEstimated || 0}</span><span style={{ fontSize: 12, color: 'var(--text-dim)', marginLeft: 4 }}>estimated</span></div>
+                <div><span style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)' }}>{stats.totalActual || 0}</span><span style={{ fontSize: 12, color: 'var(--text-dim)', marginLeft: 4 }}>actual</span></div>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}><span>Utilization</span><span>{pct}%</span></div>
+              <div className="progress-bar-bg"><div className="progress-bar-fill" style={{ width: `${Math.min(100, pct)}%`, background: pct > 100 ? 'var(--red)' : 'var(--accent)' }} /></div>
+            </div>);
+          case 'client-chart': return (stats.byClient || []).map(s => (
+            <div key={s.client} className="chart-bar-row"><div className="chart-bar-label">{s.client}</div><div className="chart-bar-track"><div className="chart-bar-value" style={{ width: `${(s.count / maxClientCount) * 100}%`, background: 'var(--accent)' }}>{s.count}</div></div></div>));
+          case 'approvals': return (stats.byApproval || []).map(s => (
+            <div key={s.approval_status} className="chart-bar-row"><div className="chart-bar-label">{s.approval_status}</div><div className="chart-bar-track"><div className="chart-bar-value" style={{ width: `${(s.count / Math.max(1, ...(stats.byApproval || []).map(x => x.count))) * 100}%`, background: s.approval_status === 'Approved' ? 'var(--green)' : s.approval_status === 'Rejected' ? 'var(--red)' : 'var(--orange)' }}>{s.count}</div></div></div>));
+          case 'recent': return recentTickets.map(t => (
+            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: STATUS_COLORS[t.status], flexShrink: 0 }} />
+              <span style={{ fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span><StatusBadge status={t.status} />
+            </div>));
+          case 'overdue': return overdue.length > 0 ? overdue.map(t => (
+            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ color: 'var(--red)' }}>{Icons.alert}</span><span style={{ fontSize: 12, flex: 1 }}>{t.title}</span><span style={{ fontSize: 11, color: 'var(--red)' }}>Due {formatDate(t.due_date)}</span>
+            </div>)) : <p style={{ color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', padding: 20 }}>No overdue tickets</p>;
+          default: return null;
+        }
+      };
+
+      return (
+        <div className="dashboard-grid">
+          {widgets.map((w, idx) => (
+            <div key={w.id} className={`widget ${dragIdx === idx ? 'dragging' : ''}`} draggable onDragStart={e => handleDragStart(e, idx)} onDragOver={e => handleDragOver(e, idx)} onDragEnd={() => setDragIdx(null)}>
+              <div className="widget-header"><h3>{w.title}</h3><div className="widget-drag-handle">{Icons.grip}</div></div>
+              <div className="widget-body">{renderWidget(w)}</div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ============ ADMIN SETTINGS VIEW ============
+    function AdminSettingsView({ onRefresh, statuses, teamMembers, onStatusesChange, onTeamMembersChange }) {
+      const [clients, setClients] = useState([]);
+      const [editClient, setEditClient] = useState(null);
+      const [editClientInfo, setEditClientInfo] = useState(null);
+      const [colors, setColors] = useState({});
+      const [importResult, setImportResult] = useState(null);
+      const [importError, setImportError] = useState(null);
+      const [importing, setImporting] = useState(false);
+      const [newClientName, setNewClientName] = useState('');
+      const [newClientEmail, setNewClientEmail] = useState('');
+      const [newMemberName, setNewMemberName] = useState('');
+      const [newMemberEmail, setNewMemberEmail] = useState('');
+      const [newMemberRole, setNewMemberRole] = useState('');
+      const [newMemberColor, setNewMemberColor] = useState('#6c5ce7');
+      const [editMember, setEditMember] = useState(null);
+      const [newStatusName, setNewStatusName] = useState('');
+      const [newStatusColor, setNewStatusColor] = useState('#6b6b80');
+      const [editStatus, setEditStatus] = useState(null);
+      const [settingsTab, setSettingsTab] = useState('clients');
+      const [manageUsersFor, setManageUsersFor] = useState(null);
+      const [clientUsers, setClientUsers] = useState([]);
+      const [newUser, setNewUser] = useState({ username: '', password: '', name: '', email: '' });
+      const [editUser, setEditUser] = useState(null);
+      const [showPasswords, setShowPasswords] = useState({});
+      const [slackConfig, setSlackConfig] = useState(null);
+      const [slackTesting, setSlackTesting] = useState(false);
+      const logoRef = useRef(null);
+      const importRef = useRef(null);
+
+      const fetchClients = async () => {
+        const data = await api('/clients');
+        if (Array.isArray(data)) setClients(data);
+      };
+
+      useEffect(() => { fetchClients(); }, []);
+
+      const handleEditBranding = (client) => {
+        setEditClient(client);
+        setColors({
+          primary_color: client.branding?.primary_color || '#6c5ce7',
+          secondary_color: client.branding?.secondary_color || '#a29bfe',
+          accent_color: client.branding?.accent_color || '#00b894',
+        });
+      };
+
+      const saveBranding = async () => {
+        await api(`/branding/${encodeURIComponent(editClient.client_name)}`, { method: 'PUT', body: JSON.stringify(colors) });
+        setEditClient(null);
+        fetchClients();
+      };
+
+      const handleLogoUpload = async (e, clientName) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const fd = new FormData(); fd.append('logo', file);
+        await fetch(`${BASE}/branding/${encodeURIComponent(clientName)}/logo`, { method: 'POST', headers: { 'x-auth-token': authToken }, body: fd });
+        fetchClients();
+      };
+
+      const handleImport = async (e, clientName) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setImporting(true); setImportResult(null); setImportError(null);
+        const fd = new FormData(); fd.append('file', file);
+        try {
+          const res = await fetch(`${BASE}/import/${encodeURIComponent(clientName)}`, { method: 'POST', headers: { 'x-auth-token': authToken }, body: fd });
+          const data = await res.json();
+          if (res.ok) { setImportResult(data); onRefresh(); }
+          else { setImportError(data.error || 'Import failed'); }
+        } catch (err) { setImportError('Import failed: ' + err.message); }
+        setImporting(false);
+        e.target.value = '';
+      };
+
+      const handleAddClient = async () => {
+        if (!newClientName.trim()) return;
+        const res = await api('/clients', { method: 'POST', body: JSON.stringify({ name: newClientName.trim(), email: newClientEmail.trim() }) });
+        if (res && !res.error) { setNewClientName(''); setNewClientEmail(''); fetchClients(); onRefresh(); }
+        else if (res?.error) { alert(res.error); }
+      };
+
+      const handleEditClientInfo = (client) => {
+        // Find the primary user (the one whose username matches company name, or first user)
+        const users = client.users || [];
+        const primaryUser = users.find(u => u.username === client.client_name) || users[0];
+        if (!primaryUser) return;
+        setEditClientInfo({ id: primaryUser.id, name: client.client_name, email: primaryUser.email || '' });
+      };
+
+      const handleSaveClientInfo = async () => {
+        if (!editClientInfo) return;
+        const res = await api(`/clients/${editClientInfo.id}`, { method: 'PUT', body: JSON.stringify({ name: editClientInfo.name.trim(), email: editClientInfo.email.trim() }) });
+        if (res && !res.error) { setEditClientInfo(null); fetchClients(); onRefresh(); }
+        else if (res?.error) { alert(res.error); }
+      };
+
+      const handleDeleteClient = async (client) => {
+        if (!confirm(`Delete client "${client.client_name}"? This will remove ALL user logins and branding for this company. Tickets will remain.`)) return;
+        await api(`/clients/${encodeURIComponent(client.client_name)}`, { method: 'DELETE' });
+        fetchClients(); onRefresh();
+      };
+
+      // Slack integration functions
+      const openSlackConfig = (client) => {
+        setSlackConfig({
+          client_name: client.client_name,
+          slack_webhook_url: client.branding?.slack_webhook_url || '',
+          slack_channel_name: client.branding?.slack_channel_name || '',
+        });
+      };
+
+      const handleSaveSlack = async () => {
+        if (!slackConfig) return;
+        await api(`/slack/${encodeURIComponent(slackConfig.client_name)}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            slack_webhook_url: slackConfig.slack_webhook_url,
+            slack_channel_name: slackConfig.slack_channel_name,
+          }),
+        });
+        setSlackConfig(null);
+        fetchClients();
+      };
+
+      const handleTestSlack = async () => {
+        if (!slackConfig) return;
+        // Save first, then test
+        await api(`/slack/${encodeURIComponent(slackConfig.client_name)}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            slack_webhook_url: slackConfig.slack_webhook_url,
+            slack_channel_name: slackConfig.slack_channel_name,
+          }),
+        });
+        setSlackTesting(true);
+        const res = await api(`/slack/${encodeURIComponent(slackConfig.client_name)}/test`, { method: 'POST' });
+        setSlackTesting(false);
+        if (res && res.success) alert('Test notification sent! Check your Slack channel.');
+        else alert('Failed to send test notification. Check the webhook URL.');
+        fetchClients();
+      };
+
+      // User management functions
+      const openManageUsers = async (client) => {
+        setManageUsersFor(client.client_name);
+        const data = await api(`/clients/${encodeURIComponent(client.client_name)}/users`);
+        if (Array.isArray(data)) setClientUsers(data);
+        setNewUser({ username: '', password: '', name: '', email: '' });
+        setEditUser(null);
+      };
+
+      const handleAddUser = async () => {
+        if (!newUser.username.trim() || !newUser.password.trim()) return alert('Username and password are required');
+        const res = await api(`/clients/${encodeURIComponent(manageUsersFor)}/users`, {
+          method: 'POST', body: JSON.stringify(newUser)
+        });
+        if (res && !res.error) {
+          setNewUser({ username: '', password: '', name: '', email: '' });
+          const data = await api(`/clients/${encodeURIComponent(manageUsersFor)}/users`);
+          if (Array.isArray(data)) setClientUsers(data);
+          fetchClients();
+        } else if (res?.error) { alert(res.error); }
+      };
+
+      const handleSaveUser = async () => {
+        if (!editUser) return;
+        const payload = { username: editUser.username, name: editUser.name, email: editUser.email };
+        if (editUser.newPassword && editUser.newPassword.trim()) payload.password = editUser.newPassword.trim();
+        const res = await api(`/clients/users/${editUser.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+        if (res && !res.error) {
+          setEditUser(null);
+          const data = await api(`/clients/${encodeURIComponent(manageUsersFor)}/users`);
+          if (Array.isArray(data)) setClientUsers(data);
+          fetchClients();
+        } else if (res?.error) { alert(res.error); }
+      };
+
+      const handleDeleteUser = async (userId) => {
+        if (!confirm('Delete this user? They will no longer be able to log in.')) return;
+        await api(`/clients/users/${userId}`, { method: 'DELETE' });
+        const data = await api(`/clients/${encodeURIComponent(manageUsersFor)}/users`);
+        if (Array.isArray(data)) setClientUsers(data);
+        fetchClients();
+      };
+
+      // Team member functions
+      const handleAddMember = async () => {
+        if (!newMemberName.trim()) return;
+        const res = await api('/team-members', { method: 'POST', body: JSON.stringify({ name: newMemberName.trim(), email: newMemberEmail.trim(), role: newMemberRole.trim(), avatar_color: newMemberColor }) });
+        if (res && !res.error) { setNewMemberName(''); setNewMemberEmail(''); setNewMemberRole(''); setNewMemberColor('#6c5ce7'); onTeamMembersChange(); }
+      };
+
+      const handleUpdateMember = async () => {
+        if (!editMember) return;
+        await api(`/team-members/${editMember.id}`, { method: 'PUT', body: JSON.stringify(editMember) });
+        setEditMember(null); onTeamMembersChange();
+      };
+
+      const handleDeleteMember = async (id) => {
+        if (!confirm('Remove this team member?')) return;
+        await api(`/team-members/${id}`, { method: 'DELETE' });
+        onTeamMembersChange();
+      };
+
+      // Status functions
+      const handleAddStatus = async () => {
+        if (!newStatusName.trim()) return;
+        const res = await api('/statuses', { method: 'POST', body: JSON.stringify({ name: newStatusName.trim(), color: newStatusColor }) });
+        if (res && !res.error) { setNewStatusName(''); setNewStatusColor('#6b6b80'); onStatusesChange(); }
+      };
+
+      const handleUpdateStatus = async () => {
+        if (!editStatus) return;
+        await api(`/statuses/${editStatus.id}`, { method: 'PUT', body: JSON.stringify(editStatus) });
+        setEditStatus(null); onStatusesChange();
+      };
+
+      const handleDeleteStatus = async (id) => {
+        if (!confirm('Delete this status? Existing tickets with this status will keep it but it won\'t appear in the Kanban board.')) return;
+        await api(`/statuses/${id}`, { method: 'DELETE' });
+        onStatusesChange();
+      };
+
+      const handleMoveStatus = async (idx, dir) => {
+        const newStatuses = [...statuses];
+        const swapIdx = idx + dir;
+        if (swapIdx < 0 || swapIdx >= newStatuses.length) return;
+        [newStatuses[idx], newStatuses[swapIdx]] = [newStatuses[swapIdx], newStatuses[idx]];
+        await api('/statuses/reorder', { method: 'PUT', body: JSON.stringify({ order: newStatuses.map(s => s.id) }) });
+        onStatusesChange();
+      };
+
+      return (
+        <div className="settings-panel">
+          {/* Settings tabs */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 20 }}>
+            {[{ id: 'clients', label: 'Clients', icon: Icons.users }, { id: 'team', label: 'Team Members', icon: Icons.users }, { id: 'statuses', label: 'Statuses', icon: Icons.kanban }].map(t => (
+              <button key={t.id} className={`btn ${settingsTab === t.id ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setSettingsTab(t.id)} style={{ gap: 6 }}>
+                {t.icon} {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* ---- CLIENTS TAB ---- */}
+          {settingsTab === 'clients' && (
+            <>
+              <div className="settings-section">
+                <div className="settings-section-header">
+                  <h3>Client Management</h3>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input className="form-control" placeholder="New client name" value={newClientName} onChange={e => setNewClientName(e.target.value)} style={{ width: 180, padding: '6px 10px' }} />
+                    <input className="form-control" placeholder="Email (optional)" value={newClientEmail} onChange={e => setNewClientEmail(e.target.value)} style={{ width: 180, padding: '6px 10px' }} />
+                    <button className="btn btn-primary btn-sm" onClick={handleAddClient}>{Icons.plus} Add Client</button>
+                  </div>
+                </div>
+                <div className="settings-section-body">
+                  {clients.map(c => (
+                    <div key={c.client_name} className="client-card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <div className="client-logo" style={{ background: c.branding?.primary_color || 'var(--accent-bg)', color: 'white' }}>
+                          {c.logo_url ? <img src={c.logo_url} alt={c.client_name} /> : ini(c.client_name)}
+                        </div>
+                        <div className="client-info">
+                          <h4>{c.client_name}</h4>
+                          <p>{(c.users || []).length} user{(c.users || []).length !== 1 ? 's' : ''} · {c.ticketCount} ticket{c.ticketCount !== 1 ? 's' : ''}{c.branding?.slack_channel_name ? ` · ${c.branding.slack_channel_name}` : ''}</p>
+                          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                            <div className="color-swatch" style={{ background: c.branding?.primary_color || '#6c5ce7' }} title="Primary" />
+                            <div className="color-swatch" style={{ background: c.branding?.secondary_color || '#a29bfe' }} title="Secondary" />
+                            <div className="color-swatch" style={{ background: c.branding?.accent_color || '#00b894' }} title="Accent" />
+                          </div>
+                        </div>
+                        <div className="client-actions" style={{ flexWrap: 'wrap' }}>
+                          <button className="btn btn-ghost btn-sm" onClick={() => handleEditClientInfo(c)}>
+                            {Icons.settings} Edit
+                          </button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => openManageUsers(c)}>
+                            {Icons.users} Users
+                          </button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => { const lr = document.createElement('input'); lr.type = 'file'; lr.accept = 'image/*'; lr.onchange = (e) => handleLogoUpload(e, c.client_name); lr.click(); }}>
+                            {Icons.upload} Logo
+                          </button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => handleEditBranding(c)}>
+                            {Icons.palette} Colors
+                          </button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => openSlackConfig(c)} style={c.branding?.slack_webhook_url ? { color: 'var(--green)' } : {}}>
+                            {Icons.slack} Slack {c.branding?.slack_webhook_url ? '●' : ''}
+                          </button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => { const ir = document.createElement('input'); ir.type = 'file'; ir.accept = '.csv,.tsv'; ir.onchange = (e) => handleImport(e, c.client_name); ir.click(); }} disabled={importing}>
+                            {Icons.download} {importing ? 'Importing...' : 'Import CSV'}
+                          </button>
+                        </div>
+                      </div>
+                      {/* Inline user list preview */}
+                      <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                        {(c.users || []).map(u => (
+                          <span key={u.id} style={{ fontSize: 11, padding: '3px 8px', background: 'var(--bg)', borderRadius: 4, color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                            {u.name}{u.username !== u.name ? ` (${u.username})` : ''}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {clients.length === 0 && <p style={{ color: 'var(--text-dim)', padding: 20, textAlign: 'center' }}>No clients yet.</p>}
+                  {importResult && <div className="import-result">Successfully imported {importResult.imported} of {importResult.total} tickets.</div>}
+                  {importError && <div className="import-error">{importError}</div>}
+                </div>
+              </div>
+
+              {/* Color Edit Modal */}
+              {editClient && (
+                <div className="modal-overlay" onClick={() => setEditClient(null)}>
+                  <div className="modal" style={{ width: 420 }} onClick={e => e.stopPropagation()}>
+                    <div className="modal-header">
+                      <h2>Branding — {editClient.client_name}</h2>
+                      <button className="close-btn" onClick={() => setEditClient(null)}>{Icons.x}</button>
+                    </div>
+                    <div className="modal-body">
+                      <div className="color-input-group"><label>Primary</label>
+                        <input type="color" value={colors.primary_color} onChange={e => setColors(c => ({ ...c, primary_color: e.target.value }))} />
+                        <input className="form-control" type="text" value={colors.primary_color} onChange={e => setColors(c => ({ ...c, primary_color: e.target.value }))} style={{ width: 100 }} /></div>
+                      <div className="color-input-group"><label>Secondary</label>
+                        <input type="color" value={colors.secondary_color} onChange={e => setColors(c => ({ ...c, secondary_color: e.target.value }))} />
+                        <input className="form-control" type="text" value={colors.secondary_color} onChange={e => setColors(c => ({ ...c, secondary_color: e.target.value }))} style={{ width: 100 }} /></div>
+                      <div className="color-input-group"><label>Accent</label>
+                        <input type="color" value={colors.accent_color} onChange={e => setColors(c => ({ ...c, accent_color: e.target.value }))} />
+                        <input className="form-control" type="text" value={colors.accent_color} onChange={e => setColors(c => ({ ...c, accent_color: e.target.value }))} style={{ width: 100 }} /></div>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                        <div style={{ flex: 1, height: 40, borderRadius: 6, background: colors.primary_color }} />
+                        <div style={{ flex: 1, height: 40, borderRadius: 6, background: colors.secondary_color }} />
+                        <div style={{ flex: 1, height: 40, borderRadius: 6, background: colors.accent_color }} />
+                      </div>
+                    </div>
+                    <div className="modal-footer">
+                      <button className="btn btn-ghost" onClick={() => setEditClient(null)}>Cancel</button>
+                      <button className="btn btn-primary" onClick={saveBranding}>Save Colors</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Edit Client Info Modal */}
+              {editClientInfo && (
+                <div className="modal-overlay" onClick={() => setEditClientInfo(null)}>
+                  <div className="modal" style={{ width: 460 }} onClick={e => e.stopPropagation()}>
+                    <div className="modal-header">
+                      <h2>Edit Client</h2>
+                      <button className="close-btn" onClick={() => setEditClientInfo(null)}>{Icons.x}</button>
+                    </div>
+                    <div className="modal-body">
+                      <div className="form-group"><label>Company Name</label>
+                        <input className="form-control" value={editClientInfo.name} onChange={e => setEditClientInfo(c => ({ ...c, name: e.target.value }))} placeholder="Company name" /></div>
+                      <div className="form-group"><label>Email</label>
+                        <input className="form-control" type="email" value={editClientInfo.email} onChange={e => setEditClientInfo(c => ({ ...c, email: e.target.value }))} placeholder="contact@company.com" /></div>
+                      <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 8 }}>Note: Changing the company name will also update the client's login credentials (username &amp; password become the new name), all associated tickets, and branding.</p>
+                    </div>
+                    <div className="modal-footer">
+                      <button className="btn btn-ghost" onClick={() => setEditClientInfo(null)}>Cancel</button>
+                      <button className="btn btn-primary" onClick={handleSaveClientInfo}>Save Changes</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Manage Users Modal */}
+              {manageUsersFor && (
+                <div className="modal-overlay" onClick={() => { setManageUsersFor(null); setEditUser(null); }}>
+                  <div className="modal" style={{ width: 640 }} onClick={e => e.stopPropagation()}>
+                    <div className="modal-header">
+                      <h2>Users — {manageUsersFor}</h2>
+                      <button className="close-btn" onClick={() => { setManageUsersFor(null); setEditUser(null); }}>{Icons.x}</button>
+                    </div>
+                    <div className="modal-body">
+                      {/* Add new user form */}
+                      <div style={{ padding: 16, background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', marginBottom: 20 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Add New User</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          <input className="form-control" placeholder="Username *" value={newUser.username} onChange={e => setNewUser(u => ({ ...u, username: e.target.value }))} style={{ padding: '8px 12px' }} />
+                          <input className="form-control" type="text" placeholder="Password *" value={newUser.password} onChange={e => setNewUser(u => ({ ...u, password: e.target.value }))} style={{ padding: '8px 12px' }} />
+                          <input className="form-control" placeholder="Display Name (optional)" value={newUser.name} onChange={e => setNewUser(u => ({ ...u, name: e.target.value }))} style={{ padding: '8px 12px' }} />
+                          <input className="form-control" type="email" placeholder="Email (optional)" value={newUser.email} onChange={e => setNewUser(u => ({ ...u, email: e.target.value }))} style={{ padding: '8px 12px' }} />
+                        </div>
+                        <button className="btn btn-primary btn-sm" style={{ marginTop: 10 }} onClick={handleAddUser}>{Icons.plus} Add User</button>
+                      </div>
+
+                      {/* User list */}
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Existing Users ({clientUsers.length})</div>
+                      {clientUsers.map(u => (
+                        <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', marginBottom: 8 }}>
+                          <div className="avatar-sm" style={{ width: 36, height: 36, fontSize: 13, flexShrink: 0 }}>{ini(u.name || u.username)}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{u.name || u.username}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
+                              Username: <strong>{u.username}</strong>
+                              {u.email ? ` · ${u.email}` : ''}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setEditUser({ ...u, newPassword: '' })}>{Icons.settings} Edit</button>
+                            <button className="btn btn-danger btn-sm" onClick={() => handleDeleteUser(u.id)}>{Icons.x}</button>
+                          </div>
+                        </div>
+                      ))}
+                      {clientUsers.length === 0 && <p style={{ color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', padding: 16 }}>No users yet for this company.</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Edit User Modal */}
+              {editUser && (
+                <div className="modal-overlay" onClick={() => setEditUser(null)} style={{ zIndex: 1100 }}>
+                  <div className="modal" style={{ width: 460 }} onClick={e => e.stopPropagation()}>
+                    <div className="modal-header">
+                      <h2>Edit User</h2>
+                      <button className="close-btn" onClick={() => setEditUser(null)}>{Icons.x}</button>
+                    </div>
+                    <div className="modal-body">
+                      <div className="form-group"><label>Username</label>
+                        <input className="form-control" value={editUser.username} onChange={e => setEditUser(u => ({ ...u, username: e.target.value }))} /></div>
+                      <div className="form-group"><label>Display Name</label>
+                        <input className="form-control" value={editUser.name || ''} onChange={e => setEditUser(u => ({ ...u, name: e.target.value }))} /></div>
+                      <div className="form-group"><label>Email</label>
+                        <input className="form-control" type="email" value={editUser.email || ''} onChange={e => setEditUser(u => ({ ...u, email: e.target.value }))} /></div>
+                      <div className="form-group"><label>New Password <span style={{ fontWeight: 400, color: 'var(--text-dim)' }}>(leave blank to keep current)</span></label>
+                        <input className="form-control" type="text" value={editUser.newPassword || ''} onChange={e => setEditUser(u => ({ ...u, newPassword: e.target.value }))} placeholder="Enter new password" /></div>
+                    </div>
+                    <div className="modal-footer">
+                      <button className="btn btn-ghost" onClick={() => setEditUser(null)}>Cancel</button>
+                      <button className="btn btn-primary" onClick={handleSaveUser}>Save Changes</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Slack Config Modal */}
+              {slackConfig && (
+                <div className="modal-overlay" onClick={() => setSlackConfig(null)}>
+                  <div className="modal" style={{ width: 520 }} onClick={e => e.stopPropagation()}>
+                    <div className="modal-header">
+                      <h2>{Icons.slack} Slack — {slackConfig.client_name}</h2>
+                      <button className="close-btn" onClick={() => setSlackConfig(null)}>{Icons.x}</button>
+                    </div>
+                    <div className="modal-body">
+                      <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
+                        Link a Slack channel to receive notifications when tickets are created, updated, or commented on for this client.
+                      </p>
+                      <div className="form-group">
+                        <label>Channel Name</label>
+                        <input className="form-control" placeholder="#client-acme" value={slackConfig.slack_channel_name}
+                          onChange={e => setSlackConfig(s => ({ ...s, slack_channel_name: e.target.value }))} />
+                      </div>
+                      <div className="form-group">
+                        <label>Webhook URL</label>
+                        <input className="form-control" placeholder="https://hooks.slack.com/services/T.../B.../xxx"
+                          value={slackConfig.slack_webhook_url}
+                          onChange={e => setSlackConfig(s => ({ ...s, slack_webhook_url: e.target.value }))}
+                          style={{ fontFamily: 'monospace', fontSize: 12 }} />
+                        <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6 }}>
+                          Create an Incoming Webhook in your Slack workspace: Apps → Incoming Webhooks → Add to Slack → Choose channel → Copy URL
+                        </p>
+                      </div>
+                      {slackConfig.slack_webhook_url && (
+                        <div style={{ padding: '12px 16px', background: 'var(--green-bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--green)', marginTop: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                            {Icons.bell} <strong>Notifications enabled</strong>
+                          </div>
+                          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+                            New tickets, status changes, comments, and file uploads will be posted to {slackConfig.slack_channel_name || 'your Slack channel'}.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="modal-footer">
+                      <button className="btn btn-ghost" onClick={() => setSlackConfig(null)}>Cancel</button>
+                      <button className="btn btn-ghost" onClick={handleTestSlack} disabled={!slackConfig.slack_webhook_url || slackTesting}>
+                        {slackTesting ? 'Sending...' : 'Test'} {Icons.slack}
+                      </button>
+                      <button className="btn btn-primary" onClick={handleSaveSlack}>Save</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="settings-section">
+                <div className="settings-section-header"><h3>CSV Import Guide</h3></div>
+                <div className="settings-section-body" style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                  <p>Upload a <strong>.csv</strong> or <strong>.tsv</strong> file to import tickets for a client. The importer auto-maps columns based on header names.</p>
+                  <p style={{ marginTop: 8 }}><strong>Supported columns:</strong> Title/Name/Task, Description/Details, Status, Priority, Estimated Hours, Actual Hours, Assignee/Owner, Due Date, Approval Status</p>
+                  <p style={{ marginTop: 8 }}>Works great with exports from Monday.com, Jira, Asana, Trello, and most project management tools.</p>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ---- TEAM MEMBERS TAB ---- */}
+          {settingsTab === 'team' && (
+            <div className="settings-section">
+              <div className="settings-section-header">
+                <h3>Team Members</h3>
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>People available for ticket assignment</span>
+              </div>
+              <div className="settings-section-body">
+                {/* Add new member form */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap', padding: 16, background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                  <input className="form-control" placeholder="Name *" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} style={{ flex: '1 1 150px', padding: '8px 12px' }} />
+                  <input className="form-control" placeholder="Email" value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} style={{ flex: '1 1 150px', padding: '8px 12px' }} />
+                  <input className="form-control" placeholder="Role (e.g. Developer)" value={newMemberRole} onChange={e => setNewMemberRole(e.target.value)} style={{ flex: '1 1 130px', padding: '8px 12px' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <input type="color" value={newMemberColor} onChange={e => setNewMemberColor(e.target.value)} style={{ width: 36, height: 36, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'none' }} />
+                  </div>
+                  <button className="btn btn-primary" onClick={handleAddMember}>{Icons.plus} Add</button>
+                </div>
+
+                {/* Member list */}
+                {teamMembers.map(m => (
+                  <div key={m.id} className="client-card">
+                    <div className="avatar-sm" style={{ width: 40, height: 40, fontSize: 14, background: m.avatar_color + '22', color: m.avatar_color, flexShrink: 0 }}>{ini(m.name)}</div>
+                    <div className="client-info">
+                      <h4>{m.name}</h4>
+                      <p>{m.role || 'No role'}{m.email ? ` · ${m.email}` : ''}</p>
+                    </div>
+                    <div className="client-actions">
+                      <button className="btn btn-ghost btn-sm" onClick={() => setEditMember({ ...m })}>{Icons.settings} Edit</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDeleteMember(m.id)}>{Icons.x}</button>
+                    </div>
+                  </div>
+                ))}
+                {teamMembers.length === 0 && <p style={{ color: 'var(--text-dim)', padding: 20, textAlign: 'center' }}>No team members yet. Add your first one above.</p>}
+              </div>
+
+              {/* Edit Member Modal */}
+              {editMember && (
+                <div className="modal-overlay" onClick={() => setEditMember(null)}>
+                  <div className="modal" style={{ width: 460 }} onClick={e => e.stopPropagation()}>
+                    <div className="modal-header">
+                      <h2>Edit Team Member</h2>
+                      <button className="close-btn" onClick={() => setEditMember(null)}>{Icons.x}</button>
+                    </div>
+                    <div className="modal-body">
+                      <div className="form-group"><label>Name</label>
+                        <input className="form-control" value={editMember.name} onChange={e => setEditMember(m => ({ ...m, name: e.target.value }))} /></div>
+                      <div className="form-group"><label>Email</label>
+                        <input className="form-control" value={editMember.email || ''} onChange={e => setEditMember(m => ({ ...m, email: e.target.value }))} /></div>
+                      <div className="form-group"><label>Role</label>
+                        <input className="form-control" value={editMember.role || ''} onChange={e => setEditMember(m => ({ ...m, role: e.target.value }))} placeholder="e.g. Developer, Designer, PM" /></div>
+                      <div className="color-input-group"><label>Avatar Color</label>
+                        <input type="color" value={editMember.avatar_color || '#6c5ce7'} onChange={e => setEditMember(m => ({ ...m, avatar_color: e.target.value }))} />
+                        <div className="avatar-sm" style={{ width: 40, height: 40, fontSize: 14, background: (editMember.avatar_color || '#6c5ce7') + '22', color: editMember.avatar_color || '#6c5ce7' }}>{ini(editMember.name)}</div>
+                      </div>
+                    </div>
+                    <div className="modal-footer">
+                      <button className="btn btn-ghost" onClick={() => setEditMember(null)}>Cancel</button>
+                      <button className="btn btn-primary" onClick={handleUpdateMember}>Save</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ---- STATUSES TAB ---- */}
+          {settingsTab === 'statuses' && (
+            <div className="settings-section">
+              <div className="settings-section-header">
+                <h3>Custom Statuses</h3>
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Drag to reorder · Used across Kanban, filters, and ticket forms</span>
+              </div>
+              <div className="settings-section-body">
+                {/* Add new status form */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 20, padding: 16, background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                  <input className="form-control" placeholder="Status name *" value={newStatusName} onChange={e => setNewStatusName(e.target.value)} style={{ flex: 1, padding: '8px 12px' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <input type="color" value={newStatusColor} onChange={e => setNewStatusColor(e.target.value)} style={{ width: 36, height: 36, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'none' }} />
+                  </div>
+                  <button className="btn btn-primary" onClick={handleAddStatus}>{Icons.plus} Add Status</button>
+                </div>
+
+                {/* Status list */}
+                {statuses.map((s, idx) => (
+                  <div key={s.id} className="client-card" style={{ alignItems: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <button className="btn btn-ghost btn-sm" style={{ padding: '2px 4px', fontSize: 10, opacity: idx === 0 ? 0.3 : 1 }} onClick={() => handleMoveStatus(idx, -1)} disabled={idx === 0}>▲</button>
+                      <button className="btn btn-ghost btn-sm" style={{ padding: '2px 4px', fontSize: 10, opacity: idx === statuses.length - 1 ? 0.3 : 1 }} onClick={() => handleMoveStatus(idx, 1)} disabled={idx === statuses.length - 1}>▼</button>
+                    </div>
+                    <div style={{ width: 24, height: 24, borderRadius: 6, background: s.color, flexShrink: 0 }} />
+                    <div className="client-info">
+                      <h4>{s.name}</h4>
+                      <p style={{ fontFamily: 'monospace', fontSize: 11 }}>{s.color}</p>
+                    </div>
+                    <div className="client-actions">
+                      <button className="btn btn-ghost btn-sm" onClick={() => setEditStatus({ ...s })}>{Icons.palette} Edit</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDeleteStatus(s.id)}>{Icons.x}</button>
+                    </div>
+                  </div>
+                ))}
+                {statuses.length === 0 && <p style={{ color: 'var(--text-dim)', padding: 20, textAlign: 'center' }}>No statuses defined. Add your first one above.</p>}
+              </div>
+
+              {/* Edit Status Modal */}
+              {editStatus && (
+                <div className="modal-overlay" onClick={() => setEditStatus(null)}>
+                  <div className="modal" style={{ width: 400 }} onClick={e => e.stopPropagation()}>
+                    <div className="modal-header">
+                      <h2>Edit Status</h2>
+                      <button className="close-btn" onClick={() => setEditStatus(null)}>{Icons.x}</button>
+                    </div>
+                    <div className="modal-body">
+                      <div className="form-group"><label>Name</label>
+                        <input className="form-control" value={editStatus.name} onChange={e => setEditStatus(s => ({ ...s, name: e.target.value }))} /></div>
+                      <div className="color-input-group"><label>Color</label>
+                        <input type="color" value={editStatus.color} onChange={e => setEditStatus(s => ({ ...s, color: e.target.value }))} />
+                        <input className="form-control" type="text" value={editStatus.color} onChange={e => setEditStatus(s => ({ ...s, color: e.target.value }))} style={{ width: 100 }} />
+                        <div style={{ width: 80, height: 28, borderRadius: 4, background: editStatus.color }} />
+                      </div>
+                    </div>
+                    <div className="modal-footer">
+                      <button className="btn btn-ghost" onClick={() => setEditStatus(null)}>Cancel</button>
+                      <button className="btn btn-primary" onClick={handleUpdateStatus}>Save</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ============ MAIN APP ============
+    function App() {
+      const [user, setUser] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [view, setView] = useState('dashboard');
+      const [tickets, setTickets] = useState([]);
+      const [stats, setStats] = useState({});
+      const [search, setSearch] = useState('');
+      const [filters, setFilters] = useState({ status: '', priority: '', client: '' });
+      const [modal, setModal] = useState(null);
+      const [customStatuses, setCustomStatuses] = useState([]);
+      const [teamMembers, setTeamMembers] = useState([]);
+      const [theme, setTheme] = useState(localStorage.getItem('devtrack_theme') || 'dark');
+      const [clientBranding, setClientBranding] = useState(null);
+      const [allClientNames, setAllClientNames] = useState([]);
+
+      // Apply theme to document
+      useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('devtrack_theme', theme);
+      }, [theme]);
+
+      const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+
+      // Check existing session
+      useEffect(() => {
+        if (authToken) {
+          api('/auth/me').then(u => { if (u && !u.error) setUser(u); setLoading(false); }).catch(() => setLoading(false));
+        } else { setLoading(false); }
+      }, []);
+
+      const fetchTickets = async () => { const data = await api('/tickets'); if (Array.isArray(data)) setTickets(data); };
+      const fetchStats = async () => { const data = await api('/stats'); if (data && !data.error) setStats(data); };
+      const fetchStatuses = async () => {
+        const data = await api('/statuses');
+        if (Array.isArray(data) && data.length > 0) {
+          setCustomStatuses(data);
+          STATUSES = data.map(s => s.name);
+          const colorMap = {};
+          data.forEach(s => { colorMap[s.name] = s.color; });
+          STATUS_COLORS = colorMap;
+        }
+      };
+      const fetchTeamMembers = async () => {
+        const data = await api('/team-members');
+        if (Array.isArray(data)) { setTeamMembers(data); TEAM_MEMBERS = data; }
+      };
+      const fetchAllClientNames = async () => {
+        const data = await api('/clients');
+        if (Array.isArray(data)) setAllClientNames(data.map(c => c.client_name).sort());
+      };
+      const fetchClientBranding = async () => {
+        const data = await api('/branding');
+        if (data && !data.error && !Array.isArray(data)) {
+          setClientBranding({
+            ...data,
+            logo_url: data.logo_filename ? `/uploads/logos/${data.logo_filename}` : null,
+          });
+        }
+      };
+
+      useEffect(() => {
+        if (user) {
+          fetchTickets(); fetchStats(); fetchStatuses(); fetchTeamMembers();
+          if (user.role === 'admin') fetchAllClientNames();
+          if (user.role !== 'admin') fetchClientBranding();
+        }
+      }, [user]);
+
+      const isAdmin = user && user.role === 'admin';
+
+      const filteredTickets = useMemo(() => {
+        return tickets.filter(t => {
+          if (filters.status && t.status !== filters.status) return false;
+          if (filters.priority && t.priority !== filters.priority) return false;
+          if (isAdmin && filters.client && t.client !== filters.client) return false;
+          if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !(t.description || '').toLowerCase().includes(search.toLowerCase())) return false;
+          return true;
+        });
+      }, [tickets, filters, search, isAdmin]);
+
+      const clients = [...new Set([...allClientNames, ...tickets.map(t => t.client).filter(Boolean)])].sort();
+
+      const handleLogin = (u) => { setUser(u); };
+      const handleLogout = () => { localStorage.removeItem('devtrack_token'); authToken = ''; setUser(null); setTickets([]); setStats({}); };
+
+      const handleSaveTicket = async (form) => {
+        if (form.id) { await api(`/tickets/${form.id}`, { method: 'PUT', body: JSON.stringify(form) }); }
+        else { await api('/tickets', { method: 'POST', body: JSON.stringify(form) }); }
+        setModal(null); fetchTickets(); fetchStats();
+      };
+      const handleDeleteTicket = async (id) => { if (!confirm('Delete this ticket?')) return; await api(`/tickets/${id}`, { method: 'DELETE' }); setModal(null); fetchTickets(); fetchStats(); };
+      const handleUpdateTicket = async (id, updates) => { await api(`/tickets/${id}`, { method: 'PUT', body: JSON.stringify(updates) }); fetchTickets(); fetchStats(); };
+
+      if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--text-dim)' }}>Loading...</div>;
+      if (!user) return <LoginPage onLogin={handleLogin} />;
+
+      const views = [
+        { id: 'dashboard', label: 'Dashboard', icon: Icons.dashboard },
+        { id: 'kanban', label: 'Kanban', icon: Icons.kanban },
+        { id: 'table', label: 'Table', icon: Icons.table },
+        { id: 'timeline', label: 'Timeline', icon: Icons.timeline },
+        { id: 'calendar', label: 'Calendar', icon: Icons.calendar },
+      ];
+      const viewTitles = { dashboard: 'Dashboard', kanban: 'Kanban Board', table: 'Table View', timeline: 'Timeline', calendar: 'Calendar', settings: 'Admin Settings' };
+      const statusColorMap = {};
+      customStatuses.forEach(s => { statusColorMap[s.name] = s.color; });
+      const getStatusColor = (name) => statusColorMap[name] || STATUS_COLORS[name] || '#6b6b80';
+
+      // Build branding style overrides for client portal
+      const brandingStyle = (!isAdmin && clientBranding) ? {
+        '--accent': clientBranding.primary_color,
+        '--accent-light': clientBranding.secondary_color,
+        '--accent-bg': clientBranding.primary_color + '1a',
+      } : {};
+
+      return (
+        <div className="app" style={brandingStyle}>
+          <div className="sidebar">
+            <div className="sidebar-brand" style={!isAdmin && clientBranding ? { borderBottom: `2px solid ${clientBranding.primary_color}` } : {}}>
+              {!isAdmin && clientBranding?.logo_url ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <img src={clientBranding.logo_url} alt={user.client_name} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }} />
+                  <div>
+                    <h1 style={clientBranding ? { background: `linear-gradient(135deg, ${clientBranding.primary_color}, ${clientBranding.secondary_color})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } : {}}>{user.client_name}</h1>
+                    <p>Client Portal</p>
+                  </div>
+                </div>
+              ) : (
+                isAdmin ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <img src="/fluidtrack-logo.png" alt="FluidTrack" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }} />
+                    <div>
+                      <h1>FluidTrack</h1>
+                      <p>Admin Portal</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h1 style={clientBranding ? { background: `linear-gradient(135deg, ${clientBranding.primary_color}, ${clientBranding.secondary_color})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } : {}}>
+                      {user.client_name}
+                    </h1>
+                    <p>Client Portal</p>
+                  </>
+                )
+              )}
+            </div>
+            <div className="sidebar-nav">
+              <div className="nav-section">
+                <div className="nav-section-title">Views</div>
+                {views.map(v => (
+                  <div key={v.id} className={`nav-item ${view === v.id ? 'active' : ''}`} onClick={() => setView(v.id)}>
+                    {v.icon}{v.label}
+                    {v.id === 'kanban' && <span className="badge">{tickets.filter(t => t.status === 'In Progress').length}</span>}
+                  </div>
+                ))}
+              </div>
+              <div className="nav-section">
+                <div className="nav-section-title">Quick Filters</div>
+                <div className="nav-item" onClick={() => { setFilters({ status: '', priority: '', client: '' }); setView('table'); }}>
+                  {Icons.table} All Tickets <span className="badge">{tickets.length}</span>
+                </div>
+                <div className="nav-item" onClick={() => { setFilters({ status: '', priority: 'Urgent', client: '' }); setView('table'); }}>
+                  {Icons.alert} Urgent <span className="badge" style={{ background: 'var(--red)' }}>{tickets.filter(t => t.priority === 'Urgent').length}</span>
+                </div>
+                <div className="nav-item" onClick={() => { setFilters({ status: '', priority: '', client: '' }); setView('table'); }}>
+                  {Icons.check} Needs Approval <span className="badge" style={{ background: 'var(--orange)' }}>{tickets.filter(t => t.approval_status === 'Pending').length}</span>
+                </div>
+              </div>
+              {isAdmin && (
+                <div className="nav-section">
+                  <div className="nav-section-title">Clients</div>
+                  {clients.map(c => (
+                    <div key={c} className={`nav-item ${filters.client === c ? 'active' : ''}`} onClick={() => { setFilters(f => ({ ...f, client: f.client === c ? '' : c })); setView('table'); }}>
+                      <div className="avatar-sm">{ini(c)}</div>{c}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {isAdmin && (
+                <div className="nav-section">
+                  <div className="nav-section-title">Admin</div>
+                  <div className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}>
+                    {Icons.settings} Settings
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="sidebar-footer">
+              <div className="sidebar-user">
+                <div className="sidebar-user-avatar" style={{ background: isAdmin ? 'var(--accent-bg)' : (clientBranding ? clientBranding.primary_color + '22' : 'var(--green-bg)'), color: isAdmin ? 'var(--accent-light)' : (clientBranding ? clientBranding.primary_color : 'var(--green)') }}>
+                  {isAdmin ? Icons.shield : ini(user.client_name)}
+                </div>
+                <div className="sidebar-user-info">
+                  <div className="sidebar-user-name">{user.name}</div>
+                  <div className="sidebar-user-role">{isAdmin ? 'Administrator' : 'Client'}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div className="theme-toggle" onClick={toggleTheme}>
+                  <span style={{ width: 16, height: 16, color: 'var(--text-dim)' }}>{theme === 'dark' ? Icons.moon : Icons.sun}</span>
+                  <div className={`theme-switch ${theme === 'light' ? 'active' : ''}`}><div className="theme-switch-knob" /></div>
+                  <span className="theme-toggle-label">{theme === 'light' ? 'Light' : 'Dark'}</span>
+                </div>
+                <button className="btn btn-ghost" style={{ fontSize: 10, padding: '4px 8px', color: 'var(--text-dim)' }} onClick={handleLogout}>
+                  {Icons.logout} Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="main">
+            <div className="topbar">
+              <div className="topbar-left">
+                <h2>{viewTitles[view] || 'Dashboard'}</h2>
+                {view !== 'dashboard' && view !== 'settings' && (
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <select className="filter-bar" value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
+                      <option value="">All Statuses</option>{(customStatuses.length > 0 ? customStatuses.map(s => s.name) : STATUSES).map(s => <option key={s}>{s}</option>)}</select>
+                    <select className="filter-bar" value={filters.priority} onChange={e => setFilters(f => ({ ...f, priority: e.target.value }))}>
+                      <option value="">All Priorities</option>{PRIORITIES.map(p => <option key={p}>{p}</option>)}</select>
+                    {isAdmin && <select className="filter-bar" value={filters.client} onChange={e => setFilters(f => ({ ...f, client: e.target.value }))}>
+                      <option value="">All Clients</option>{clients.map(c => <option key={c}>{c}</option>)}</select>}
+                  </div>
+                )}
+              </div>
+              <div className="topbar-right">
+                {view !== 'settings' && <>
+                  <div className="search-box">{Icons.search}<input placeholder="Search tickets..." value={search} onChange={e => setSearch(e.target.value)} /></div>
+                  <button className="btn btn-primary" onClick={() => setModal({ ticket: null, isNew: true })}>{Icons.plus} New Ticket</button>
+                </>}
+              </div>
+            </div>
+
+            <div className="content">
+              {view === 'dashboard' && <DashboardView tickets={filteredTickets} stats={stats} user={user} />}
+              {view === 'kanban' && <KanbanView tickets={filteredTickets} onTicketClick={t => setModal({ ticket: t, isNew: false })} onUpdateTicket={handleUpdateTicket} user={user} statuses={customStatuses} />}
+              {view === 'table' && <TableView tickets={filteredTickets} onTicketClick={t => setModal({ ticket: t, isNew: false })} user={user} />}
+              {view === 'timeline' && <TimelineView tickets={filteredTickets} onTicketClick={t => setModal({ ticket: t, isNew: false })} />}
+              {view === 'calendar' && <CalendarView tickets={filteredTickets} onTicketClick={t => setModal({ ticket: t, isNew: false })} />}
+              {view === 'settings' && isAdmin && <AdminSettingsView onRefresh={() => { fetchTickets(); fetchStats(); fetchAllClientNames(); }} statuses={customStatuses} teamMembers={teamMembers} onStatusesChange={fetchStatuses} onTeamMembersChange={fetchTeamMembers} />}
+            </div>
+          </div>
+
+          {modal && <TicketModal ticket={modal.ticket} isNew={modal.isNew} onClose={() => setModal(null)} onSave={handleSaveTicket} onDelete={handleDeleteTicket} user={user} statuses={customStatuses} teamMembers={teamMembers} />}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
