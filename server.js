@@ -18,6 +18,9 @@ app.use(express.static(path.join(__dirname, 'public'), { etag: false, lastModifi
 app.use(express.static(__dirname, { etag: false, lastModified: false }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Health check (responds even if DB hasn't initialized yet)
+app.get('/api/health', (req, res) => res.json({ status: 'ok', dbReady: !!db }));
+
 // File upload config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -63,7 +66,9 @@ let db;
 const sessions = {};
 
 async function initDB() {
-  const SQL = await initSqlJs();
+  const SQL = await initSqlJs({
+    locateFile: file => path.join(__dirname, 'node_modules', 'sql.js', 'dist', file)
+  });
   db = new SQL.Database();
 
   db.run(`
@@ -96,9 +101,13 @@ async function initDB() {
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
       sort_order INTEGER DEFAULT 0,
-      column_order INTEGER DEFAULT 0
+      column_order INTEGER DEFAULT 0,
+      completed_date TEXT DEFAULT ''
     )
   `);
+
+  // Add completed_date column if it doesn't exist (migration for existing DBs)
+  try { db.run('ALTER TABLE tickets ADD COLUMN completed_date TEXT DEFAULT ""'); } catch(e) {}
 
   db.run(`
     CREATE TABLE IF NOT EXISTS attachments (
@@ -468,6 +477,12 @@ app.put('/api/tickets/:id', authMiddleware, (req, res) => {
       db.run(`UPDATE tickets SET ${field} = ?, updated_at = datetime('now') WHERE id = ?`, [val, req.params.id]);
 
       if (field === 'status' && val !== ticket.status) {
+        // Auto-set completed_date when status changes to Done; clear it if moved out of Done
+        if (val === 'Done') {
+          db.run(`UPDATE tickets SET completed_date = datetime('now') WHERE id = ?`, [req.params.id]);
+        } else if (ticket.status === 'Done') {
+          db.run(`UPDATE tickets SET completed_date = '' WHERE id = ?`, [req.params.id]);
+        }
         db.run('INSERT INTO activity_log (id, ticket_id, action, details, user_name) VALUES (?, ?, ?, ?, ?)',
           [uuidv4(), req.params.id, 'status_changed', `Status changed from "${ticket.status}" to "${val}"`, req.session.name]);
         changes.push(`Status: ${oldVal} → ${val}`);
@@ -647,6 +662,64 @@ app.get('/api/stats', authMiddleware, (req, res) => {
   }
 
   res.json(result);
+});
+
+// ============ TIME TRACKING REPORT (Admin only) ============
+
+app.get('/api/reports/time-tracking', authMiddleware, adminOnly, (req, res) => {
+  const { client, startDate, endDate, completedStart, completedEnd } = req.query;
+  let where = '1=1';
+  const params = [];
+
+  if (client) { where += ' AND t.client = ?'; params.push(client); }
+  if (startDate) { where += ' AND t.created_at >= ?'; params.push(startDate); }
+  if (endDate) { where += " AND t.created_at <= ? || ' 23:59:59'"; params.push(endDate); }
+  if (completedStart) { where += ' AND t.completed_date >= ?'; params.push(completedStart); }
+  if (completedEnd) { where += " AND t.completed_date <= ? || ' 23:59:59'"; params.push(completedEnd); }
+
+  const tickets = allRows(`
+    SELECT t.id, t.title, t.client, t.status, t.priority, t.assignee,
+           t.estimated_hours, t.actual_hours, t.created_at, t.completed_date, t.due_date
+    FROM tickets t
+    WHERE ${where}
+    ORDER BY t.created_at DESC
+  `, params);
+
+  // Summary stats
+  const totalEstimated = tickets.reduce((sum, t) => sum + (t.estimated_hours || 0), 0);
+  const totalActual = tickets.reduce((sum, t) => sum + (t.actual_hours || 0), 0);
+  const completedTickets = tickets.filter(t => t.status === 'Done');
+  const completedEstimated = completedTickets.reduce((sum, t) => sum + (t.estimated_hours || 0), 0);
+  const completedActual = completedTickets.reduce((sum, t) => sum + (t.actual_hours || 0), 0);
+
+  // By client breakdown
+  const byClient = {};
+  tickets.forEach(t => {
+    const c = t.client || 'Unassigned';
+    if (!byClient[c]) byClient[c] = { client: c, tickets: 0, estimated: 0, actual: 0, completed: 0 };
+    byClient[c].tickets++;
+    byClient[c].estimated += t.estimated_hours || 0;
+    byClient[c].actual += t.actual_hours || 0;
+    if (t.status === 'Done') byClient[c].completed++;
+  });
+
+  // By assignee breakdown
+  const byAssignee = {};
+  tickets.forEach(t => {
+    const a = t.assignee || 'Unassigned';
+    if (!byAssignee[a]) byAssignee[a] = { assignee: a, tickets: 0, estimated: 0, actual: 0, completed: 0 };
+    byAssignee[a].tickets++;
+    byAssignee[a].estimated += t.estimated_hours || 0;
+    byAssignee[a].actual += t.actual_hours || 0;
+    if (t.status === 'Done') byAssignee[a].completed++;
+  });
+
+  res.json({
+    tickets,
+    summary: { total: tickets.length, totalEstimated, totalActual, completedTickets: completedTickets.length, completedEstimated, completedActual },
+    byClient: Object.values(byClient),
+    byAssignee: Object.values(byAssignee)
+  });
 });
 
 // ============ CLIENT BRANDING (Admin only) ============
@@ -1198,7 +1271,14 @@ app.put('/api/statuses/reorder', authMiddleware, adminOnly, (req, res) => {
 // ============ START ============
 
 initDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`\n  🎫 Ticketing System running at http://localhost:${PORT}\n`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n  🎫 Ticketing System running on port ${PORT}\n`);
+  });
+}).catch(err => {
+  console.error('Failed to initialize database:', err);
+  // Start server anyway with error endpoint so Railway doesn't just serve static files
+  app.get('/api/health', (req, res) => res.json({ error: 'DB init failed', message: err.message }));
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server started on port ${PORT} but DB init failed: ${err.message}`);
   });
 });

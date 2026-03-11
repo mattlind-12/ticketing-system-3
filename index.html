@@ -179,7 +179,9 @@
     .progress-bar-bg { background: var(--bg-elevated); border-radius: 6px; height: 10px; overflow: hidden; }
     .progress-bar-fill { height: 100%; border-radius: 6px; transition: width 0.5s ease; }
 
-    .chart-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .chart-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 4px 6px; border-radius: 6px; transition: background 0.15s; }
+    .chart-bar-row:hover { background: var(--bg-elevated); }
+    .stat-item:hover { opacity: 0.85; }
     .chart-bar-label { font-size: 12px; color: var(--text-secondary); min-width: 100px; text-align: right; }
     .chart-bar-track { flex: 1; height: 24px; background: var(--bg-elevated); border-radius: 4px; overflow: hidden; position: relative; }
     .chart-bar-value { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 600; color: white; transition: width 0.5s ease; }
@@ -306,6 +308,9 @@
       moon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
       slack: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14.5 2c-1.1 0-2 .9-2 2v4.5H17c1.1 0 2-.9 2-2s-.9-2-2-2h-2.5V2z"/><path d="M2 9.5c0-1.1.9-2 2-2h4.5V12c0 1.1-.9 2-2 2s-2-.9-2-2V9.5H2z"/><path d="M9.5 22c1.1 0 2-.9 2-2v-4.5H7c-1.1 0-2 .9-2 2s.9 2 2 2h2.5V22z"/><path d="M22 14.5c0 1.1-.9 2-2 2h-4.5V12c0-1.1.9-2 2-2s2 .9 2 2v2.5H22z"/></svg>,
       bell: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+      report: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+      barChart: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>,
+      filter: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
     };
 
     // ============ HELPERS ============
@@ -769,7 +774,7 @@
     }
 
     // ============ DASHBOARD VIEW ============
-    function DashboardView({ tickets, stats, user }) {
+    function DashboardView({ tickets, stats, user, onNavigate }) {
       const isAdmin = user.role === 'admin';
       const adminWidgets = [
         { id: 'overview', title: 'Overview', type: 'overview' },
@@ -810,15 +815,17 @@
         switch (w.type) {
           case 'overview': return (
             <div className="stat-grid">
-              <div className="stat-item"><div className="stat-value" style={{ color: 'var(--accent-light)' }}>{stats.total || 0}</div><div className="stat-label">Total Tickets</div></div>
-              <div className="stat-item"><div className="stat-value" style={{ color: 'var(--red)' }}>{stats.overdue || 0}</div><div className="stat-label">Overdue</div></div>
+              <div className="stat-item" style={{ cursor: 'pointer' }} onClick={() => onNavigate && onNavigate({})} title="View all tickets"><div className="stat-value" style={{ color: 'var(--accent-light)' }}>{stats.total || 0}</div><div className="stat-label">Total Tickets</div></div>
+              <div className="stat-item" style={{ cursor: 'pointer' }} onClick={() => onNavigate && onNavigate({ overdue: true })} title="View overdue tickets"><div className="stat-value" style={{ color: 'var(--red)' }}>{stats.overdue || 0}</div><div className="stat-label">Overdue</div></div>
               <div className="stat-item"><div className="stat-value" style={{ color: 'var(--blue)' }}>{stats.totalEstimated || 0}h</div><div className="stat-label">Est. Hours</div></div>
               <div className="stat-item"><div className="stat-value" style={{ color: 'var(--green)' }}>{stats.totalActual || 0}h</div><div className="stat-label">Actual Hours</div></div>
             </div>);
           case 'status-chart': return (stats.byStatus || []).map(s => (
-            <div key={s.status} className="chart-bar-row"><div className="chart-bar-label">{s.status}</div><div className="chart-bar-track"><div className="chart-bar-value" style={{ width: `${(s.count / maxStatusCount) * 100}%`, background: STATUS_COLORS[s.status] }}>{s.count}</div></div></div>));
+            <div key={s.status} className="chart-bar-row" style={{ cursor: 'pointer' }} onClick={() => onNavigate && onNavigate({ status: s.status })} title={`View ${s.status} tickets`}>
+              <div className="chart-bar-label">{s.status}</div><div className="chart-bar-track"><div className="chart-bar-value" style={{ width: `${(s.count / maxStatusCount) * 100}%`, background: STATUS_COLORS[s.status] }}>{s.count}</div></div></div>));
           case 'priority-chart': return (stats.byPriority || []).map(s => (
-            <div key={s.priority} className="chart-bar-row"><div className="chart-bar-label">{s.priority}</div><div className="chart-bar-track"><div className="chart-bar-value" style={{ width: `${(s.count / maxPriorityCount) * 100}%`, background: PRIORITY_COLORS[s.priority] }}>{s.count}</div></div></div>));
+            <div key={s.priority} className="chart-bar-row" style={{ cursor: 'pointer' }} onClick={() => onNavigate && onNavigate({ priority: s.priority })} title={`View ${s.priority} tickets`}>
+              <div className="chart-bar-label">{s.priority}</div><div className="chart-bar-track"><div className="chart-bar-value" style={{ width: `${(s.count / maxPriorityCount) * 100}%`, background: PRIORITY_COLORS[s.priority] }}>{s.count}</div></div></div>));
           case 'hours':
             const pct = stats.totalEstimated > 0 ? Math.round((stats.totalActual / stats.totalEstimated) * 100) : 0;
             return (<div>
@@ -830,16 +837,18 @@
               <div className="progress-bar-bg"><div className="progress-bar-fill" style={{ width: `${Math.min(100, pct)}%`, background: pct > 100 ? 'var(--red)' : 'var(--accent)' }} /></div>
             </div>);
           case 'client-chart': return (stats.byClient || []).map(s => (
-            <div key={s.client} className="chart-bar-row"><div className="chart-bar-label">{s.client}</div><div className="chart-bar-track"><div className="chart-bar-value" style={{ width: `${(s.count / maxClientCount) * 100}%`, background: 'var(--accent)' }}>{s.count}</div></div></div>));
+            <div key={s.client} className="chart-bar-row" style={{ cursor: 'pointer' }} onClick={() => onNavigate && onNavigate({ client: s.client })} title={`View ${s.client} tickets`}>
+              <div className="chart-bar-label">{s.client}</div><div className="chart-bar-track"><div className="chart-bar-value" style={{ width: `${(s.count / maxClientCount) * 100}%`, background: 'var(--accent)' }}>{s.count}</div></div></div>));
           case 'approvals': return (stats.byApproval || []).map(s => (
-            <div key={s.approval_status} className="chart-bar-row"><div className="chart-bar-label">{s.approval_status}</div><div className="chart-bar-track"><div className="chart-bar-value" style={{ width: `${(s.count / Math.max(1, ...(stats.byApproval || []).map(x => x.count))) * 100}%`, background: s.approval_status === 'Approved' ? 'var(--green)' : s.approval_status === 'Rejected' ? 'var(--red)' : 'var(--orange)' }}>{s.count}</div></div></div>));
+            <div key={s.approval_status} className="chart-bar-row" style={{ cursor: 'pointer' }} onClick={() => onNavigate && onNavigate({ approval: s.approval_status })} title={`View ${s.approval_status} tickets`}>
+              <div className="chart-bar-label">{s.approval_status}</div><div className="chart-bar-track"><div className="chart-bar-value" style={{ width: `${(s.count / Math.max(1, ...(stats.byApproval || []).map(x => x.count))) * 100}%`, background: s.approval_status === 'Approved' ? 'var(--green)' : s.approval_status === 'Rejected' ? 'var(--red)' : 'var(--orange)' }}>{s.count}</div></div></div>));
           case 'recent': return recentTickets.map(t => (
-            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => onNavigate && onNavigate({ ticketId: t.id })}>
               <span style={{ width: 8, height: 8, borderRadius: 2, background: STATUS_COLORS[t.status], flexShrink: 0 }} />
               <span style={{ fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span><StatusBadge status={t.status} />
             </div>));
           case 'overdue': return overdue.length > 0 ? overdue.map(t => (
-            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => onNavigate && onNavigate({ ticketId: t.id })}>
               <span style={{ color: 'var(--red)' }}>{Icons.alert}</span><span style={{ fontSize: 12, flex: 1 }}>{t.title}</span><span style={{ fontSize: 11, color: 'var(--red)' }}>Due {formatDate(t.due_date)}</span>
             </div>)) : <p style={{ color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', padding: 20 }}>No overdue tickets</p>;
           default: return null;
@@ -854,6 +863,251 @@
               <div className="widget-body">{renderWidget(w)}</div>
             </div>
           ))}
+        </div>
+      );
+    }
+
+    // ============ TIME TRACKING REPORT VIEW ============
+    function TimeTrackingReport() {
+      const [reportData, setReportData] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [filterClient, setFilterClient] = useState('');
+      const [filterStartDate, setFilterStartDate] = useState('');
+      const [filterEndDate, setFilterEndDate] = useState('');
+      const [filterCompletedStart, setFilterCompletedStart] = useState('');
+      const [filterCompletedEnd, setFilterCompletedEnd] = useState('');
+      const [clients, setClients] = useState([]);
+      const [reportTab, setReportTab] = useState('summary');
+
+      useEffect(() => {
+        api('/clients').then(data => { if (Array.isArray(data)) setClients(data.map(c => c.client_name).sort()); });
+      }, []);
+
+      const runReport = async () => {
+        setLoading(true);
+        const params = new URLSearchParams();
+        if (filterClient) params.set('client', filterClient);
+        if (filterStartDate) params.set('startDate', filterStartDate);
+        if (filterEndDate) params.set('endDate', filterEndDate);
+        if (filterCompletedStart) params.set('completedStart', filterCompletedStart);
+        if (filterCompletedEnd) params.set('completedEnd', filterCompletedEnd);
+        const data = await api(`/reports/time-tracking?${params.toString()}`);
+        if (data && !data.error) setReportData(data);
+        setLoading(false);
+      };
+
+      const clearFilters = () => {
+        setFilterClient(''); setFilterStartDate(''); setFilterEndDate('');
+        setFilterCompletedStart(''); setFilterCompletedEnd('');
+        setReportData(null);
+      };
+
+      const formatHours = (h) => h ? h.toFixed(1) : '0.0';
+      const utilPct = (actual, est) => est > 0 ? Math.round((actual / est) * 100) : 0;
+
+      return (
+        <div style={{ padding: 0 }}>
+          {/* Filters */}
+          <div className="widget" style={{ marginBottom: 20 }}>
+            <div className="widget-header"><h3>{Icons.filter} Report Filters</h3></div>
+            <div className="widget-body">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', display: 'block', marginBottom: 4 }}>CLIENT</label>
+                  <select className="filter-bar" value={filterClient} onChange={e => setFilterClient(e.target.value)} style={{ width: '100%' }}>
+                    <option value="">All Clients</option>
+                    {clients.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', display: 'block', marginBottom: 4 }}>CREATED FROM</label>
+                  <input type="date" className="filter-bar" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} style={{ width: '100%' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', display: 'block', marginBottom: 4 }}>CREATED TO</label>
+                  <input type="date" className="filter-bar" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} style={{ width: '100%' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', display: 'block', marginBottom: 4 }}>COMPLETED FROM</label>
+                  <input type="date" className="filter-bar" value={filterCompletedStart} onChange={e => setFilterCompletedStart(e.target.value)} style={{ width: '100%' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', display: 'block', marginBottom: 4 }}>COMPLETED TO</label>
+                  <input type="date" className="filter-bar" value={filterCompletedEnd} onChange={e => setFilterCompletedEnd(e.target.value)} style={{ width: '100%' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-primary" onClick={runReport} disabled={loading}>
+                  {loading ? 'Running...' : `${Icons.barChart ? '' : ''}Run Report`}
+                </button>
+                <button className="btn btn-ghost" onClick={clearFilters}>Clear Filters</button>
+              </div>
+            </div>
+          </div>
+
+          {reportData && (
+            <>
+              {/* Summary Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
+                <div className="widget" style={{ padding: 16, textAlign: 'center' }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent-light)' }}>{reportData.summary.total}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Total Tickets</div>
+                </div>
+                <div className="widget" style={{ padding: 16, textAlign: 'center' }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green)' }}>{reportData.summary.completedTickets}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Completed</div>
+                </div>
+                <div className="widget" style={{ padding: 16, textAlign: 'center' }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--blue)' }}>{formatHours(reportData.summary.totalEstimated)}h</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Est. Hours</div>
+                </div>
+                <div className="widget" style={{ padding: 16, textAlign: 'center' }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--orange)' }}>{formatHours(reportData.summary.totalActual)}h</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Actual Hours</div>
+                </div>
+                <div className="widget" style={{ padding: 16, textAlign: 'center' }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: utilPct(reportData.summary.totalActual, reportData.summary.totalEstimated) > 100 ? 'var(--red)' : 'var(--accent-light)' }}>
+                    {utilPct(reportData.summary.totalActual, reportData.summary.totalEstimated)}%
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Utilization</div>
+                </div>
+              </div>
+
+              {/* Tab Switcher */}
+              <div style={{ display: 'flex', gap: 2, marginBottom: 16, background: 'var(--bg-elevated)', borderRadius: 8, padding: 3, width: 'fit-content' }}>
+                {[{id: 'summary', label: 'By Client'}, {id: 'assignee', label: 'By Assignee'}, {id: 'tickets', label: 'All Tickets'}].map(tab => (
+                  <button key={tab.id} className={`btn ${reportTab === tab.id ? 'btn-primary' : 'btn-ghost'}`} style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => setReportTab(tab.id)}>{tab.label}</button>
+                ))}
+              </div>
+
+              {/* By Client Tab */}
+              {reportTab === 'summary' && (
+                <div className="widget">
+                  <div className="widget-header"><h3>Hours by Client</h3></div>
+                  <div className="widget-body">
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                          <th style={{ textAlign: 'left', padding: '8px 12px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>CLIENT</th>
+                          <th style={{ textAlign: 'center', padding: '8px 12px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>TICKETS</th>
+                          <th style={{ textAlign: 'center', padding: '8px 12px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>COMPLETED</th>
+                          <th style={{ textAlign: 'right', padding: '8px 12px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>EST. HOURS</th>
+                          <th style={{ textAlign: 'right', padding: '8px 12px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>ACTUAL HOURS</th>
+                          <th style={{ textAlign: 'right', padding: '8px 12px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>UTILIZATION</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportData.byClient.map(row => (
+                          <tr key={row.client} style={{ borderBottom: '1px solid var(--border)' }}>
+                            <td style={{ padding: '10px 12px', fontWeight: 600 }}>{row.client}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{row.tickets}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--green)' }}>{row.completed}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--blue)' }}>{formatHours(row.estimated)}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--orange)' }}>{formatHours(row.actual)}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                              <span style={{ color: utilPct(row.actual, row.estimated) > 100 ? 'var(--red)' : 'var(--green)' }}>{utilPct(row.actual, row.estimated)}%</span>
+                            </td>
+                          </tr>
+                        ))}
+                        <tr style={{ fontWeight: 700, borderTop: '2px solid var(--border)' }}>
+                          <td style={{ padding: '10px 12px' }}>Total</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center' }}>{reportData.summary.total}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--green)' }}>{reportData.summary.completedTickets}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--blue)' }}>{formatHours(reportData.summary.totalEstimated)}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--orange)' }}>{formatHours(reportData.summary.totalActual)}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                            <span style={{ color: utilPct(reportData.summary.totalActual, reportData.summary.totalEstimated) > 100 ? 'var(--red)' : 'var(--green)' }}>
+                              {utilPct(reportData.summary.totalActual, reportData.summary.totalEstimated)}%
+                            </span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* By Assignee Tab */}
+              {reportTab === 'assignee' && (
+                <div className="widget">
+                  <div className="widget-header"><h3>Hours by Assignee</h3></div>
+                  <div className="widget-body">
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                          <th style={{ textAlign: 'left', padding: '8px 12px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>ASSIGNEE</th>
+                          <th style={{ textAlign: 'center', padding: '8px 12px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>TICKETS</th>
+                          <th style={{ textAlign: 'center', padding: '8px 12px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>COMPLETED</th>
+                          <th style={{ textAlign: 'right', padding: '8px 12px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>EST. HOURS</th>
+                          <th style={{ textAlign: 'right', padding: '8px 12px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>ACTUAL HOURS</th>
+                          <th style={{ textAlign: 'right', padding: '8px 12px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>UTILIZATION</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportData.byAssignee.map(row => (
+                          <tr key={row.assignee} style={{ borderBottom: '1px solid var(--border)' }}>
+                            <td style={{ padding: '10px 12px', fontWeight: 600 }}>{row.assignee}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{row.tickets}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--green)' }}>{row.completed}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--blue)' }}>{formatHours(row.estimated)}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--orange)' }}>{formatHours(row.actual)}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                              <span style={{ color: utilPct(row.actual, row.estimated) > 100 ? 'var(--red)' : 'var(--green)' }}>{utilPct(row.actual, row.estimated)}%</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* All Tickets Tab */}
+              {reportTab === 'tickets' && (
+                <div className="widget">
+                  <div className="widget-header"><h3>Ticket Details ({reportData.tickets.length})</h3></div>
+                  <div className="widget-body" style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 800 }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                          <th style={{ textAlign: 'left', padding: '8px 10px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>TITLE</th>
+                          <th style={{ textAlign: 'left', padding: '8px 10px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>CLIENT</th>
+                          <th style={{ textAlign: 'center', padding: '8px 10px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>STATUS</th>
+                          <th style={{ textAlign: 'left', padding: '8px 10px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>ASSIGNEE</th>
+                          <th style={{ textAlign: 'right', padding: '8px 10px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>EST.</th>
+                          <th style={{ textAlign: 'right', padding: '8px 10px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>ACTUAL</th>
+                          <th style={{ textAlign: 'left', padding: '8px 10px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>CREATED</th>
+                          <th style={{ textAlign: 'left', padding: '8px 10px', color: 'var(--text-dim)', fontSize: 11, fontWeight: 600 }}>COMPLETED</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportData.tickets.map(t => (
+                          <tr key={t.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                            <td style={{ padding: '8px 10px', maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</td>
+                            <td style={{ padding: '8px 10px', color: 'var(--text-dim)' }}>{t.client}</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'center' }}><StatusBadge status={t.status} /></td>
+                            <td style={{ padding: '8px 10px', color: 'var(--text-dim)' }}>{t.assignee || '—'}</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'right', color: 'var(--blue)' }}>{formatHours(t.estimated_hours)}</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'right', color: 'var(--orange)' }}>{formatHours(t.actual_hours)}</td>
+                            <td style={{ padding: '8px 10px', color: 'var(--text-dim)' }}>{t.created_at ? t.created_at.substring(0, 10) : '—'}</td>
+                            <td style={{ padding: '8px 10px', color: t.completed_date ? 'var(--green)' : 'var(--text-dim)' }}>{t.completed_date ? t.completed_date.substring(0, 10) : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {!reportData && !loading && (
+            <div className="widget" style={{ textAlign: 'center', padding: 40 }}>
+              <div style={{ width: 48, height: 48, margin: '0 auto 16px', color: 'var(--text-dim)' }}>{Icons.report}</div>
+              <p style={{ color: 'var(--text-dim)', fontSize: 14, marginBottom: 8 }}>Select your filters and click "Run Report" to generate a time tracking report.</p>
+              <p style={{ color: 'var(--text-dim)', fontSize: 12 }}>Filter by client, date range, or ticket completion date.</p>
+            </div>
+          )}
         </div>
       );
     }
@@ -1495,7 +1749,7 @@
       const [tickets, setTickets] = useState([]);
       const [stats, setStats] = useState({});
       const [search, setSearch] = useState('');
-      const [filters, setFilters] = useState({ status: '', priority: '', client: '' });
+      const [filters, setFilters] = useState({ status: '', priority: '', client: '', overdue: false });
       const [modal, setModal] = useState(null);
       const [customStatuses, setCustomStatuses] = useState([]);
       const [teamMembers, setTeamMembers] = useState([]);
@@ -1563,6 +1817,7 @@
           if (filters.status && t.status !== filters.status) return false;
           if (filters.priority && t.priority !== filters.priority) return false;
           if (isAdmin && filters.client && t.client !== filters.client) return false;
+          if (filters.overdue && !(t.due_date && new Date(t.due_date) < new Date() && t.status !== 'Done')) return false;
           if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !(t.description || '').toLowerCase().includes(search.toLowerCase())) return false;
           return true;
         });
@@ -1581,6 +1836,22 @@
       const handleDeleteTicket = async (id) => { if (!confirm('Delete this ticket?')) return; await api(`/tickets/${id}`, { method: 'DELETE' }); setModal(null); fetchTickets(); fetchStats(); };
       const handleUpdateTicket = async (id, updates) => { await api(`/tickets/${id}`, { method: 'PUT', body: JSON.stringify(updates) }); fetchTickets(); fetchStats(); };
 
+      const handleDashboardNavigate = (filter) => {
+        if (filter.ticketId) {
+          const ticket = tickets.find(t => t.id === filter.ticketId);
+          if (ticket) setModal({ ticket, isNew: false });
+          return;
+        }
+        setFilters({
+          status: filter.status || '',
+          priority: filter.priority || '',
+          client: filter.client || '',
+          overdue: !!filter.overdue
+        });
+        setSearch('');
+        setView('table');
+      };
+
       if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--text-dim)' }}>Loading...</div>;
       if (!user) return <LoginPage onLogin={handleLogin} />;
 
@@ -1591,7 +1862,7 @@
         { id: 'timeline', label: 'Timeline', icon: Icons.timeline },
         { id: 'calendar', label: 'Calendar', icon: Icons.calendar },
       ];
-      const viewTitles = { dashboard: 'Dashboard', kanban: 'Kanban Board', table: 'Table View', timeline: 'Timeline', calendar: 'Calendar', settings: 'Admin Settings' };
+      const viewTitles = { dashboard: 'Dashboard', kanban: 'Kanban Board', table: 'Table View', timeline: 'Timeline', calendar: 'Calendar', settings: 'Admin Settings', reports: 'Time Tracking Report' };
       const statusColorMap = {};
       customStatuses.forEach(s => { statusColorMap[s.name] = s.color; });
       const getStatusColor = (name) => statusColorMap[name] || STATUS_COLORS[name] || '#6b6b80';
@@ -1646,13 +1917,13 @@
               </div>
               <div className="nav-section">
                 <div className="nav-section-title">Quick Filters</div>
-                <div className="nav-item" onClick={() => { setFilters({ status: '', priority: '', client: '' }); setView('table'); }}>
+                <div className="nav-item" onClick={() => { setFilters({ status: '', priority: '', client: '', overdue: false }); setView('table'); }}>
                   {Icons.table} All Tickets <span className="badge">{tickets.length}</span>
                 </div>
-                <div className="nav-item" onClick={() => { setFilters({ status: '', priority: 'Urgent', client: '' }); setView('table'); }}>
+                <div className="nav-item" onClick={() => { setFilters({ status: '', priority: 'Urgent', client: '', overdue: false }); setView('table'); }}>
                   {Icons.alert} Urgent <span className="badge" style={{ background: 'var(--red)' }}>{tickets.filter(t => t.priority === 'Urgent').length}</span>
                 </div>
-                <div className="nav-item" onClick={() => { setFilters({ status: '', priority: '', client: '' }); setView('table'); }}>
+                <div className="nav-item" onClick={() => { setFilters({ status: '', priority: '', client: '', overdue: false }); setView('table'); }}>
                   {Icons.check} Needs Approval <span className="badge" style={{ background: 'var(--orange)' }}>{tickets.filter(t => t.approval_status === 'Pending').length}</span>
                 </div>
               </div>
@@ -1669,6 +1940,9 @@
               {isAdmin && (
                 <div className="nav-section">
                   <div className="nav-section-title">Admin</div>
+                  <div className={`nav-item ${view === 'reports' ? 'active' : ''}`} onClick={() => setView('reports')}>
+                    {Icons.report} Reports
+                  </div>
                   <div className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}>
                     {Icons.settings} Settings
                   </div>
@@ -1702,7 +1976,7 @@
             <div className="topbar">
               <div className="topbar-left">
                 <h2>{viewTitles[view] || 'Dashboard'}</h2>
-                {view !== 'dashboard' && view !== 'settings' && (
+                {view !== 'dashboard' && view !== 'settings' && view !== 'reports' && (
                   <div style={{ display: 'flex', gap: 10 }}>
                     <select className="filter-bar" value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
                       <option value="">All Statuses</option>{(customStatuses.length > 0 ? customStatuses.map(s => s.name) : STATUSES).map(s => <option key={s}>{s}</option>)}</select>
@@ -1710,11 +1984,12 @@
                       <option value="">All Priorities</option>{PRIORITIES.map(p => <option key={p}>{p}</option>)}</select>
                     {isAdmin && <select className="filter-bar" value={filters.client} onChange={e => setFilters(f => ({ ...f, client: e.target.value }))}>
                       <option value="">All Clients</option>{clients.map(c => <option key={c}>{c}</option>)}</select>}
+                    {filters.overdue && <span className="badge" style={{ background: 'var(--red)', cursor: 'pointer', padding: '4px 10px', fontSize: 11 }} onClick={() => setFilters(f => ({ ...f, overdue: false }))}>Overdue Only ✕</span>}
                   </div>
                 )}
               </div>
               <div className="topbar-right">
-                {view !== 'settings' && <>
+                {view !== 'settings' && view !== 'reports' && <>
                   <div className="search-box">{Icons.search}<input placeholder="Search tickets..." value={search} onChange={e => setSearch(e.target.value)} /></div>
                   <button className="btn btn-primary" onClick={() => setModal({ ticket: null, isNew: true })}>{Icons.plus} New Ticket</button>
                 </>}
@@ -1722,11 +1997,12 @@
             </div>
 
             <div className="content">
-              {view === 'dashboard' && <DashboardView tickets={filteredTickets} stats={stats} user={user} />}
+              {view === 'dashboard' && <DashboardView tickets={filteredTickets} stats={stats} user={user} onNavigate={handleDashboardNavigate} />}
               {view === 'kanban' && <KanbanView tickets={filteredTickets} onTicketClick={t => setModal({ ticket: t, isNew: false })} onUpdateTicket={handleUpdateTicket} user={user} statuses={customStatuses} />}
               {view === 'table' && <TableView tickets={filteredTickets} onTicketClick={t => setModal({ ticket: t, isNew: false })} user={user} />}
               {view === 'timeline' && <TimelineView tickets={filteredTickets} onTicketClick={t => setModal({ ticket: t, isNew: false })} />}
               {view === 'calendar' && <CalendarView tickets={filteredTickets} onTicketClick={t => setModal({ ticket: t, isNew: false })} />}
+              {view === 'reports' && isAdmin && <TimeTrackingReport />}
               {view === 'settings' && isAdmin && <AdminSettingsView onRefresh={() => { fetchTickets(); fetchStats(); fetchAllClientNames(); }} statuses={customStatuses} teamMembers={teamMembers} onStatusesChange={fetchStatuses} onTeamMembersChange={fetchTeamMembers} />}
             </div>
           </div>
