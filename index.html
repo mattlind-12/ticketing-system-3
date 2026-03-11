@@ -1825,7 +1825,7 @@
 
       const clients = [...new Set([...allClientNames, ...tickets.map(t => t.client).filter(Boolean)])].sort();
 
-      const handleLogin = (u) => { setUser(u); };
+      const handleLogin = (u) => { setUser(u); setView('dashboard'); setFilters({ status: '', priority: '', client: '', overdue: false }); setSearch(''); };
       const handleLogout = () => { localStorage.removeItem('devtrack_token'); authToken = ''; setUser(null); setTickets([]); setStats({}); };
 
       const handleSaveTicket = async (form) => {
