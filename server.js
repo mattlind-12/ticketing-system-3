@@ -13,7 +13,9 @@ app.use(cors());
 app.use(express.json());
 app.disable('etag');
 app.use((req, res, next) => { res.set('Cache-Control', 'no-store, no-cache, must-revalidate'); next(); });
+// Serve static files from 'public' subfolder if it exists, otherwise from root
 app.use(express.static(path.join(__dirname, 'public'), { etag: false, lastModified: false }));
+app.use(express.static(__dirname, { etag: false, lastModified: false }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // File upload config
